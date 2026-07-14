@@ -1,13 +1,14 @@
 FROM python:3.11-slim
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 RUN addgroup --system app && adduser --system --group app
 
 WORKDIR /app
 
 COPY pyproject.toml .
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+RUN uv pip install --system --no-cache -e .
 
 COPY src/ ./src/
 

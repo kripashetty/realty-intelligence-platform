@@ -44,7 +44,9 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/src:/app/src
+      - uv_cache:/root/.cache/uv
 
 volumes:
   postgres_data:
   ollama_data:
+  uv_cache:
