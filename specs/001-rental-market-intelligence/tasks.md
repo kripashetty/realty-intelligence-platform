@@ -17,7 +17,7 @@ and confirmed failing before any implementation task begins. Red → Green → R
 
 | Phase | Goal | Tasks | Status |
 |-------|------|-------|--------|
-| **Phase 1: Setup** | Project structure, tooling, Dockerfiles, fixture CSV | T001–T010 (10 tasks) | ⬜ Not started |
+| **Phase 1: Setup** | Project structure, tooling, Dockerfiles, fixture CSV | T001–T010 (10 tasks) | ✅ Complete |
 | **Phase 2: Foundational** | DB models, migrations, FastAPI skeleton, Bicep infra | T011–T021 (11 tasks) | ⬜ Not started |
 | **Phase 3: US1 — CSV Import** | CSV upload endpoint + validation + background geocoding (FR-001, FR-002) | T022–T029 (8 tasks) | ⬜ Not started |
 | **Phase 3: US1 — Recommendation** | Comparable filter + statistical pricing + Ollama explanation (FR-003–FR-006, FR-009) | T030–T039 (10 tasks) | ⬜ Not started |
@@ -59,16 +59,16 @@ GitHub Actions workflows for backend (pytest → Docker build) and frontend (vit
 
 **Purpose**: Initialise project structure and tooling for both backend and frontend.
 
-- [ ] T001 Create project directory structure: `backend/`, `frontend/`, `infra/`, `.github/workflows/`
-- [ ] T002 [P] Initialise Python backend project with FastAPI, SQLAlchemy, pytest dependencies in `backend/pyproject.toml`
-- [ ] T003 [P] Initialise React TypeScript frontend project with Vite in `frontend/`
-- [ ] T004 [P] Configure TypeScript strict mode (`strict: true`) in `frontend/tsconfig.json`
-- [ ] T005 [P] Configure backend linting and formatting (ruff, black) in `backend/pyproject.toml`
-- [ ] T006 [P] Configure frontend linting and formatting (ESLint, Prettier) in `frontend/package.json`
-- [ ] T007 [P] Create backend `Dockerfile` (Python 3.11 slim, non-root user) in `backend/Dockerfile`
-- [ ] T008 [P] Create frontend `Dockerfile` (Node build + nginx serve) in `frontend/Dockerfile`
-- [ ] T009 Create `docker-compose.yml` for local development (FastAPI + PostgreSQL + Ollama with `llama3.1:8b`) at `docker-compose.yml`
-- [ ] T010 [P] Create sample CSV fixture with 50 Berlin listings in `specs/001-rental-market-intelligence/fixtures/sample-listings.csv` (matches schema in `contracts/api-v1.md`)
+- [X] T001 Create project directory structure: `backend/`, `frontend/`, `infra/`, `.github/workflows/`
+- [X] T002 [P] Initialise Python backend project with FastAPI, SQLAlchemy, pytest dependencies in `backend/pyproject.toml`
+- [X] T003 [P] Initialise React TypeScript frontend project with Vite in `frontend/`
+- [X] T004 [P] Configure TypeScript strict mode (`strict: true`) in `frontend/tsconfig.json`
+- [X] T005 [P] Configure backend linting and formatting (ruff, black) in `backend/pyproject.toml`
+- [X] T006 [P] Configure frontend linting and formatting (ESLint, Prettier) in `frontend/package.json`
+- [X] T007 [P] Create backend `Dockerfile` (Python 3.11 slim, non-root user) in `backend/Dockerfile`
+- [X] T008 [P] Create frontend `Dockerfile` (Node build + nginx serve) in `frontend/Dockerfile`
+- [X] T009 Create `docker-compose.yml` for local development (FastAPI + PostgreSQL + Ollama with `llama3.1:8b`) at `docker-compose.yml`
+- [X] T010 [P] Create sample CSV fixture with 50 Berlin listings in `specs/001-rental-market-intelligence/fixtures/sample-listings.csv` (matches schema in `contracts/api-v1.md`)
 
 ---
 
