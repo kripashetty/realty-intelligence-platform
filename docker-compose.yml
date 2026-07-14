@@ -28,6 +28,19 @@ services:
       retries: 10
       start_period: 30s
 
+  # Pulls llama3.1:8b on first run (~5GB). Skipped on subsequent starts if model is cached.
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: ["ollama", "pull", "llama3.1:8b"]
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    restart: "no"
+
   backend:
     build:
       context: ./backend
@@ -45,6 +58,17 @@ services:
     volumes:
       - ./backend/src:/app/src
       - uv_cache:/root/.cache/uv
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
