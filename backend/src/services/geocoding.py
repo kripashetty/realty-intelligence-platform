@@ -8,6 +8,10 @@ logger = logging.getLogger(__name__)
 
 _RATE_LIMIT_DELAY = 1.0  # Nominatim: max 1 req/sec
 
+# Germany bounding box — reject geocoding results outside this range
+_DE_LAT_MIN, _DE_LAT_MAX = 47.2, 55.1
+_DE_LNG_MIN, _DE_LNG_MAX = 5.8, 15.1
+
 
 class GeocodingService:
     def __init__(self, user_agent: str = "realty-intelligence-platform/1.0"):
@@ -21,7 +25,14 @@ class GeocodingService:
             )
             if location is None:
                 return (None, None)
-            return (location.latitude, location.longitude)
+            lat, lng = location.latitude, location.longitude
+            if not (_DE_LAT_MIN <= lat <= _DE_LAT_MAX and _DE_LNG_MIN <= lng <= _DE_LNG_MAX):
+                logger.warning(
+                    "Geocoding %r returned non-Germany coordinates (%.4f, %.4f) — ignoring",
+                    address, lat, lng,
+                )
+                return (None, None)
+            return (lat, lng)
         except (GeocoderServiceError, Exception) as exc:
             logger.warning("Geocoding failed for %r: %s", address, exc)
             return (None, None)

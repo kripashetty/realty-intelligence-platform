@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 VALID_AMENITIES = {"balcony", "parking", "elevator", "furnished", "garden", "cellar"}
@@ -31,6 +31,11 @@ class Factor(BaseModel):
     name: str
     description: str
     value: str
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def coerce_to_str(cls, v: object) -> str:
+        return str(v)
 
 
 class DataFreshness(BaseModel):

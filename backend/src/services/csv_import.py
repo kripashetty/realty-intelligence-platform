@@ -1,11 +1,10 @@
+import csv as csv_module
 import io
 import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
-
-import pandas as pd
 
 REQUIRED_COLUMNS = {"address", "price", "size", "rooms", "url", "date", "provider"}
 
@@ -111,21 +110,38 @@ class ParseResult:
 class CsvImportService:
     def parse(self, file: io.BytesIO) -> ParseResult:
         try:
-            df = pd.read_csv(file, dtype=str, keep_default_na=False)
+            content = file.read().decode("utf-8-sig")
         except Exception as exc:
-            raise ValueError(f"Cannot parse CSV: {exc}") from exc
+            raise ValueError(f"Cannot read file: {exc}") from exc
 
-        missing = REQUIRED_COLUMNS - set(df.columns.str.lower())
+        reader = csv_module.DictReader(io.StringIO(content))
+
+        if not reader.fieldnames:
+            raise ValueError("CSV file is empty or has no header row")
+
+        columns = {col.lower().strip() for col in reader.fieldnames}
+        missing = REQUIRED_COLUMNS - columns
         if missing:
             raise ValueError(f"Missing required columns: {sorted(missing)}")
 
-        df.columns = df.columns.str.lower()
-        result = ParseResult(total_rows=len(df))
-
+        result = ParseResult()
         seen: set[tuple[str, str]] = set()
-        for i, raw_row in enumerate(df.to_dict(orient="records"), start=2):
+
+        for i, raw_row in enumerate(reader, start=2):
+            result.total_rows += 1
+
+            # Extra fields land under the None key when commas appear inside unquoted values.
+            if None in raw_row:
+                result.skip_reasons.append({
+                    "row_number": i,
+                    "reason": "Row has too many fields — unquoted comma inside a text value",
+                })
+                continue
+
+            row = {k.lower().strip(): (v or "") for k, v in raw_row.items()}
+
             try:
-                validated = validate_row(raw_row, row_number=i)
+                validated = validate_row(row, row_number=i)
             except InvalidRowError as exc:
                 result.skip_reasons.append({"row_number": i, "reason": str(exc)})
                 continue
@@ -133,7 +149,7 @@ class CsvImportService:
             dedup_key = (validated["source_url"], str(validated["listing_date"]))
             if dedup_key in seen:
                 result.skip_reasons.append(
-                    {"row_number": i, "reason": f"Duplicate listing (url + date already exists)"}
+                    {"row_number": i, "reason": "Duplicate listing (url + date already exists)"}
                 )
                 continue
             seen.add(dedup_key)

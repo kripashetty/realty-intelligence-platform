@@ -54,12 +54,15 @@ async def get_recommendation(
     # Geocode apartment address
     apt_lat, apt_lng = await _geocoding.geocode(request.address)
 
-    # Find comparables
+    # Find comparables — geo preferred; fall back to size/rooms if geo yields nothing
     if apt_lat is not None and apt_lng is not None:
         comparables = await _comparables.find_comparables(
             db, lat=apt_lat, lng=apt_lng, size_m2=request.size_m2, rooms=request.rooms
         )
     else:
+        comparables = []
+
+    if not comparables:
         comparables = await _comparables.find_comparables_no_geo(
             db, size_m2=request.size_m2, rooms=request.rooms
         )
