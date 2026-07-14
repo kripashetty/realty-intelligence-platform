@@ -1,27 +1,26 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: N/A → 1.0.0 (initial ratification)
+Version change: 1.0.0 → 1.0.1 (PATCH — technology standards clarification)
 
-Modified principles: N/A (initial constitution — all sections are new)
+Modified: Technology Standards table — AI/LLM row
+  - 1.0.0: Claude API (Anthropic) | claude-sonnet-5 or latest
+  - 1.0.1: Ollama (self-hosted) | llama3.1:8b or mistral:7b-instruct; CPU for MVP, GPU-ready
 
-Added sections:
-  - Core Principles (5 principles)
-  - Technology Standards
-  - Development Workflow
-  - Governance
+Rationale: Switching to Ollama keeps all data on-premises, eliminates per-token API costs,
+and removes the external API dependency. GPU inference deferred to post-MVP.
+CPU-only inference comfortably fits the 60-second recommendation SLA.
 
-Removed sections: N/A
+Affected artifacts:
+  - specs/001-rental-market-intelligence/research.md ✅ Decision 3 updated
+  - specs/001-rental-market-intelligence/plan.md     ✅ Dependencies + structure updated
 
 Templates reviewed:
-  - .specify/templates/plan-template.md   ✅ No update needed — Constitution Check placeholder
-                                              is filled at /speckit-plan runtime
-  - .specify/templates/spec-template.md   ✅ No update needed — generic structure compatible
-  - .specify/templates/tasks-template.md  ✅ No update needed — task categories compatible
-  - .specify/templates/checklist-template.md ✅ No update needed — generic structure compatible
-  - .specify/templates/commands/          ✅ No commands directory present
+  - .specify/templates/plan-template.md   ✅ No update needed
+  - .specify/templates/spec-template.md   ✅ No update needed
+  - .specify/templates/tasks-template.md  ✅ No update needed
 
-Deferred TODOs: None — all placeholders resolved.
+Deferred TODOs: GPU workload profile (Azure Container Apps) — revisit post-MVP.
 -->
 
 # Realty Intelligence Platform Constitution
@@ -123,7 +122,7 @@ require a constitution amendment.
 | Backend language | Python | 3.11+ |
 | Database | Azure PostgreSQL Flexible Server | 15+ |
 | ORM | SQLAlchemy | 2.x (async) |
-| AI / LLM | Claude API (Anthropic) | claude-sonnet-5 or latest |
+| AI / LLM | Ollama (self-hosted) | llama3.1:8b or mistral:7b-instruct; CPU for MVP, GPU-ready post-MVP |
 | Container runtime | Docker | — |
 | Hosting (backend) | Azure Container Apps | — |
 | Hosting (frontend) | Azure Static Web Apps | — |
@@ -181,4 +180,4 @@ unless an amendment is ratified.
 Complexity beyond what the principles allow MUST be justified in the feature's
 `plan.md` Complexity Tracking table.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-13 | **Last Amended**: 2026-07-13
+**Version**: 1.0.1 | **Ratified**: 2026-07-13 | **Last Amended**: 2026-07-13

@@ -1,2 +1,33 @@
 # Claude Code user-specific memory
 .claude/projects/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# Node.js / TypeScript
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.*
+!.env.example
+
+# Universal
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
