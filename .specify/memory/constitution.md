@@ -145,10 +145,12 @@ an explicit justification comment.
 
 ### Pull Requests
 
+- All PRs MUST target `main` as the base branch
 - Every PR MUST include passing tests (all red-green cycles complete)
 - Every PR MUST pass the Constitution Check from the feature's `plan.md`
 - PRs require at least one reviewer approval before merge
 - Merge strategy: squash merge to keep `main` history linear
+- Closed issues MUST be listed one per line using `Closes #N` — never comma-separated
 
 ### Quality Gates (mandatory before merge)
 
