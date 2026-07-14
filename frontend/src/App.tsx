@@ -1,8 +1,13 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RecommendationPage } from './pages/RecommendationPage'
+
+const queryClient = new QueryClient()
+
 function App() {
   return (
-    <div>
-      <h1>Realty Intelligence Platform</h1>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <RecommendationPage />
+    </QueryClientProvider>
   )
 }
 
