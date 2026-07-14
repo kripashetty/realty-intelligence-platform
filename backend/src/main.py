@@ -1,0 +1,18 @@
+from fastapi import FastAPI
+
+from src.api.v1 import router as api_v1_router
+
+app = FastAPI(
+    title="Realty Intelligence Platform",
+    version="1.0.0",
+    description="Rental market intelligence API — US1: pricing recommendations for Berlin landlords",
+    openapi_url="/api/v1/openapi.json",
+    docs_url="/api/v1/docs",
+)
+
+app.include_router(api_v1_router, prefix="/api/v1")
+
+
+@app.get("/health", tags=["Health"])
+async def health() -> dict:
+    return {"status": "ok"}

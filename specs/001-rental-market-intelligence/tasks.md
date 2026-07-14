@@ -18,7 +18,7 @@ and confirmed failing before any implementation task begins. Red → Green → R
 | Phase | Goal | Tasks | Status |
 |-------|------|-------|--------|
 | **Phase 1: Setup** | Project structure, tooling, Dockerfiles, fixture CSV | T001–T010 (10 tasks) | ✅ Complete |
-| **Phase 2: Foundational** | DB models, migrations, FastAPI skeleton, Bicep infra | T011–T021 (11 tasks) | ⬜ Not started |
+| **Phase 2: Foundational** | DB models, migrations, FastAPI skeleton, Bicep infra | T011–T021 (11 tasks) | ✅ Complete |
 | **Phase 3: US1 — CSV Import** | CSV upload endpoint + validation + background geocoding (FR-001, FR-002) | T022–T029 (8 tasks) | ⬜ Not started |
 | **Phase 3: US1 — Recommendation** | Comparable filter + statistical pricing + Ollama explanation (FR-003–FR-006, FR-009) | T030–T039 (10 tasks) | ⬜ Not started |
 | **Phase 3: US1 — Frontend** | React components: form, uploader, result, freshness bar | T040–T049 (10 tasks) | ⬜ Not started |
@@ -79,17 +79,17 @@ implementation depends on.
 
 ⚠️ **CRITICAL**: No US1 implementation can begin until this phase is complete.
 
-- [ ] T011 Set up SQLAlchemy async engine, session factory, and base class in `backend/src/db.py`
-- [ ] T012 Initialise Alembic for async SQLAlchemy migrations in `backend/alembic/`
-- [ ] T013 Create FastAPI application entry point with `/api/v1` router registration in `backend/src/main.py`
-- [ ] T014 [P] Create `ImportBatch` SQLAlchemy model (fields per `data-model.md`) in `backend/src/models/import_batch.py`
-- [ ] T015 [P] Create `Listing` SQLAlchemy model with unique constraint `(source_url, listing_date)` and lat/lng indexes in `backend/src/models/listing.py`
-- [ ] T016 [P] Create `PricingRecommendation` SQLAlchemy model in `backend/src/models/recommendation.py`
-- [ ] T017 Create Alembic migration for `import_batches`, `listings`, `pricing_recommendations` tables in `backend/alembic/versions/001_initial_schema.py` (depends on T014, T015, T016)
-- [ ] T018 [P] Create Bicep module for Azure PostgreSQL Flexible Server 15+ in `infra/modules/postgresql.bicep`
-- [ ] T019 [P] Create Bicep module for Azure Key Vault in `infra/modules/keyvault.bicep`
-- [ ] T020 Create Bicep module for Container Apps environment (FastAPI container + Ollama sidecar, CPU workload profile, GPU-ready parameter) in `infra/modules/container-apps.bicep`
-- [ ] T021 Create Bicep main file and dev/prod parameter files in `infra/main.bicep`, `infra/parameters/dev.bicepparam`, `infra/parameters/prod.bicepparam`
+- [X] T011 Set up SQLAlchemy async engine, session factory, and base class in `backend/src/db.py`
+- [X] T012 Initialise Alembic for async SQLAlchemy migrations in `backend/alembic/`
+- [X] T013 Create FastAPI application entry point with `/api/v1` router registration in `backend/src/main.py`
+- [X] T014 [P] Create `ImportBatch` SQLAlchemy model (fields per `data-model.md`) in `backend/src/models/import_batch.py`
+- [X] T015 [P] Create `Listing` SQLAlchemy model with unique constraint `(source_url, listing_date)` and lat/lng indexes in `backend/src/models/listing.py`
+- [X] T016 [P] Create `PricingRecommendation` SQLAlchemy model in `backend/src/models/recommendation.py`
+- [X] T017 Create Alembic migration for `import_batches`, `listings`, `pricing_recommendations` tables in `backend/alembic/versions/001_initial_schema.py` (depends on T014, T015, T016)
+- [X] T018 [P] Create Bicep module for Azure PostgreSQL Flexible Server 15+ in `infra/modules/postgresql.bicep`
+- [X] T019 [P] Create Bicep module for Azure Key Vault in `infra/modules/keyvault.bicep`
+- [X] T020 Create Bicep module for Container Apps environment (FastAPI container + Ollama sidecar, CPU workload profile, GPU-ready parameter) in `infra/modules/container-apps.bicep`
+- [X] T021 Create Bicep main file and dev/prod parameter files in `infra/main.bicep`, `infra/parameters/dev.bicepparam`, `infra/parameters/prod.bicepparam`
 
 **Checkpoint**: Foundation complete — US1 implementation can begin.
 
