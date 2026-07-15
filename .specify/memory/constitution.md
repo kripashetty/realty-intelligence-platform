@@ -155,11 +155,31 @@ an explicit justification comment.
 ### Quality Gates (mandatory before merge)
 
 1. All tests pass (`pytest` backend, `vitest` frontend)
-2. TypeScript compilation with zero errors
-3. No `any` types without justification comment
-4. OpenAPI schema unchanged OR version bumped if contract changed
-5. IaC validated (`bicep build` or `terraform validate`) if infrastructure changed
-6. No secrets or credentials in diff
+2. `uv run ruff check src/ tests/` exits 0 — zero lint errors
+3. TypeScript compilation with zero errors
+4. No `any` types without justification comment
+5. OpenAPI schema unchanged OR version bumped if contract changed
+6. IaC validated (`bicep build` or `terraform validate`) if infrastructure changed
+7. No secrets or credentials in diff
+
+### Python Coding Standards
+
+These apply to all Python code in `backend/src/` and `backend/tests/`. They match the
+`ruff` config (`line-length = 88`, `target-version = py311`, `select = E W F I N UP`).
+
+**Run before every commit**: `uv run ruff check src/ tests/`
+
+Rules most commonly violated in generated or fast-typed code — know these before writing:
+
+| Rule | Requirement | Common mistake |
+|------|-------------|----------------|
+| E501 | Max 88 chars per line | Long string literals, log messages, docstrings |
+| UP042 | Use `enum.StrEnum` not `(str, enum.Enum)` | Python <3.11 habit |
+| N806 | Function-scoped variables must be lowercase | Math constants like `R = 6371` |
+| E741 | No ambiguous names: `l`, `O`, `I` | List comprehension variable `l` |
+
+When a string literal is the only thing exceeding the limit, split it with implicit
+concatenation across lines rather than adding a `# noqa` suppression.
 
 ## Governance
 
@@ -182,4 +202,4 @@ unless an amendment is ratified.
 Complexity beyond what the principles allow MUST be justified in the feature's
 `plan.md` Complexity Tracking table.
 
-**Version**: 1.0.1 | **Ratified**: 2026-07-13 | **Last Amended**: 2026-07-13
+**Version**: 1.0.2 | **Ratified**: 2026-07-13 | **Last Amended**: 2026-07-15
