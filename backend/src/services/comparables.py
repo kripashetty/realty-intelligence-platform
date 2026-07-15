@@ -1,5 +1,4 @@
 import math
-from typing import Any
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,12 +12,15 @@ _ROOMS_TOLERANCE = 1.0  # ±1 room
 
 
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    R = 6371.0
+    earth_radius_km = 6371.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lng2 - lng1)
-    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    a = (
+        math.sin(dphi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    )
+    return earth_radius_km * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 class ComparablesService:
@@ -67,14 +69,16 @@ class ComparablesService:
         size_m2: float,
         rooms: float,
     ) -> list[Listing]:
-        """Fallback when apartment coordinates are unavailable: filter by size/rooms only."""
+        """Fallback: filter by size/rooms only when coordinates are unavailable."""
         result = await db.execute(
             select(Listing).where(
                 and_(
                     Listing.size_m2.between(
                         size_m2 * (1 - _SIZE_TOLERANCE), size_m2 * (1 + _SIZE_TOLERANCE)
                     ),
-                    Listing.rooms.between(rooms - _ROOMS_TOLERANCE, rooms + _ROOMS_TOLERANCE),
+                    Listing.rooms.between(
+                        rooms - _ROOMS_TOLERANCE, rooms + _ROOMS_TOLERANCE
+                    ),
                 )
             )
         )

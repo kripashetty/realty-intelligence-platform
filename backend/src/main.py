@@ -8,7 +8,7 @@ from src.api.v1 import router as api_v1_router
 app = FastAPI(
     title="Realty Intelligence Platform",
     version="1.0.0",
-    description="Rental market intelligence API — US1: pricing recommendations for Berlin landlords",
+    description="Rental market intelligence API — US1: pricing recommendations",
     openapi_url="/api/v1/openapi.json",
     docs_url="/api/v1/docs",
 )

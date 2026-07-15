@@ -7,7 +7,7 @@ import numpy as np
 import scipy.stats
 
 if TYPE_CHECKING:
-    from src.models.listing import Listing
+    pass
 
 
 @dataclass
@@ -33,7 +33,7 @@ class PricingService:
         if not listings:
             raise ValueError("No comparable listings provided")
 
-        prices = [float(l.price_eur) for l in listings]
+        prices = [float(listing.price_eur) for listing in listings]
         median = statistics.median(prices)
         low = float(np.percentile(prices, 25))
         high = float(np.percentile(prices, 75))

@@ -26,10 +26,14 @@ class GeocodingService:
             if location is None:
                 return (None, None)
             lat, lng = location.latitude, location.longitude
-            if not (_DE_LAT_MIN <= lat <= _DE_LAT_MAX and _DE_LNG_MIN <= lng <= _DE_LNG_MAX):
+            if not (
+                _DE_LAT_MIN <= lat <= _DE_LAT_MAX and _DE_LNG_MIN <= lng <= _DE_LNG_MAX
+            ):
                 logger.warning(
-                    "Geocoding %r returned non-Germany coordinates (%.4f, %.4f) — ignoring",
-                    address, lat, lng,
+                    "Geocoding %r returned non-Germany coords (%.4f, %.4f) — ignoring",
+                    address,
+                    lat,
+                    lng,
                 )
                 return (None, None)
             return (lat, lng)
@@ -48,7 +52,6 @@ class GeocodingService:
         return results
 
     async def update_listing_coordinates(self, db, batch_id) -> None:
-        import uuid
 
         from sqlalchemy import select, update
 
@@ -64,7 +67,9 @@ class GeocodingService:
         await db.commit()
 
         result = await db.execute(
-            select(Listing.id, Listing.address).where(Listing.import_batch_id == batch_id)
+            select(Listing.id, Listing.address).where(
+                Listing.import_batch_id == batch_id
+            )
         )
         rows = result.fetchall()
 

@@ -3,10 +3,10 @@
 Written before implementation (TDD red phase).
 src.services.csv_import does not exist yet.
 """
+
 import io
 from decimal import Decimal
 
-import pandas as pd
 import pytest
 
 from src.services.csv_import import (
@@ -17,7 +17,16 @@ from src.services.csv_import import (
     validate_row,
 )
 
-REQUIRED_COLUMNS = {"title", "address", "price", "size", "rooms", "url", "date", "provider"}
+REQUIRED_COLUMNS = {
+    "title",
+    "address",
+    "price",
+    "size",
+    "rooms",
+    "url",
+    "date",
+    "provider",
+}
 
 
 class TestNormalizeGermanDecimal:
@@ -41,10 +50,12 @@ class TestNormalizeGermanDecimal:
 class TestParseListingDate:
     def test_parses_iso_format(self):
         from datetime import date
+
         assert parse_listing_date("2026-07-10") == date(2026, 7, 10)
 
     def test_parses_german_dot_format(self):
         from datetime import date
+
         assert parse_listing_date("10.07.2026") == date(2026, 7, 10)
 
     def test_raises_on_future_date(self):
@@ -150,10 +161,12 @@ class TestCsvImportServiceParse:
             service.parse(csv)
 
     def test_parse_returns_valid_rows_and_skip_reasons(self):
-        csv = self._make_csv([
-            "Nice flat,Invalidenstraße 50 10115 Berlin,1200.00,65.0,2.0,3,https://example.com/a,2026-07-10,immobilienscout24",
-            ",Bad row,-50,3,0,,not-a-url,2026-07-10,immobilienscout24",
-        ])
+        csv = self._make_csv(
+            [
+                "Nice flat,Invalidenstraße 50 10115 Berlin,1200.00,65.0,2.0,3,https://example.com/a,2026-07-10,immobilienscout24",
+                ",Bad row,-50,3,0,,not-a-url,2026-07-10,immobilienscout24",
+            ]
+        )
         service = CsvImportService()
         result = service.parse(csv)
         assert len(result.valid_rows) == 1
@@ -162,7 +175,10 @@ class TestCsvImportServiceParse:
 
     def test_deduplication_marks_second_occurrence_as_skipped(self):
         duplicate_url = "https://example.com/dup"
-        row = f"Flat,Invalidenstraße 50 10115 Berlin,1200,65,2,3,{duplicate_url},2026-07-10,immobilienscout24"
+        row = (
+            f"Flat,Invalidenstraße 50 10115 Berlin,1200,65,2,3,"
+            f"{duplicate_url},2026-07-10,immobilienscout24"
+        )
         csv = self._make_csv([row, row])
         service = CsvImportService()
         result = service.parse(csv)
@@ -171,9 +187,11 @@ class TestCsvImportServiceParse:
         assert "Duplicate" in result.skip_reasons[0]["reason"]
 
     def test_german_decimal_rows_are_parsed_correctly(self):
-        csv = self._make_csv([
-            "Flat,Invalidenstraße 50 10115 Berlin,1.250,00,72,5,2,5,3,https://example.com/g,2026-07-10,immobilienscout24",
-        ])
+        csv = self._make_csv(
+            [
+                "Flat,Invalidenstraße 50 10115 Berlin,1.250,00,72,5,2,5,3,https://example.com/g,2026-07-10,immobilienscout24",
+            ]
+        )
         service = CsvImportService()
         result = service.parse(csv)
         assert len(result.valid_rows) == 1

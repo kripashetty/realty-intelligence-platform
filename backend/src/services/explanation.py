@@ -14,7 +14,8 @@ _SYSTEM_PROMPT = (
     "Use ONLY the data provided. Do NOT invent statistics. "
     "Respond with a JSON object containing exactly two keys: "
     '"explanation" (a plain-English paragraph under 200 words) and '
-    '"factors" (an array of exactly 3 objects, each with "name", "description", and "value" keys). '
+    '"factors" (an array of exactly 3 objects, each with'
+    ' "name", "description", and "value" keys). '
     "Do not include any text outside the JSON object."
 )
 

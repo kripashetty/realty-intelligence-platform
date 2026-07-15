@@ -4,13 +4,13 @@ Written before implementation (TDD red phase).
 src.services.explanation does not exist yet.
 Ollama HTTP calls are mocked.
 """
+
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.services.explanation import ExplanationService
-
 
 STATS = {
     "comparable_count": 15,
@@ -28,15 +28,15 @@ APARTMENT = {
     "amenities": ["balcony"],
 }
 
+_EXP = "Based on 15 comparables in Mitte, the median price is €1,250/month."
+_F1 = (
+    '{"name":"Market Median","description":"15 comparables median €1,250",'
+    '"value":"€1,250/month"}'
+)
+_F2 = '{"name":"Supply Level","description":"15 active listings","value":"15 listings"}'
+_F3 = '{"name":"Price Range","description":"IQR €1,100–€1,420","value":"€1,100–€1,420"}'
 VALID_OLLAMA_RESPONSE = {
-    "response": (
-        '{"explanation": "Based on 15 comparables in Mitte, the median price is €1,250/month.", '
-        '"factors": ['
-        '{"name": "Market Median", "description": "15 comparables median €1,250", "value": "€1,250/month"}, '
-        '{"name": "Supply Level", "description": "15 active listings", "value": "15 listings"}, '
-        '{"name": "Price Range", "description": "IQR €1,100–€1,420", "value": "€1,100–€1,420"}'
-        "]}"
-    )
+    "response": f'{{"explanation":"{_EXP}","factors":[{_F1},{_F2},{_F3}]}}'
 }
 
 
@@ -46,7 +46,9 @@ class TestExplanationService:
         return ExplanationService(ollama_url="http://localhost:11434")
 
     @patch("src.services.explanation.httpx.AsyncClient")
-    async def test_returns_explanation_and_three_factors(self, mock_client_cls, service):
+    async def test_returns_explanation_and_three_factors(
+        self, mock_client_cls, service
+    ):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = VALID_OLLAMA_RESPONSE
@@ -67,12 +69,17 @@ class TestExplanationService:
             assert "value" in factor
 
     @patch("src.services.explanation.httpx.AsyncClient")
-    async def test_graceful_fallback_when_ollama_unreachable(self, mock_client_cls, service):
+    async def test_graceful_fallback_when_ollama_unreachable(
+        self, mock_client_cls, service
+    ):
         import httpx
+
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
-        mock_client.post = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+        mock_client.post = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
         mock_client_cls.return_value = mock_client
 
         result = await service.generate(apartment=APARTMENT, stats=STATS)
@@ -83,6 +90,7 @@ class TestExplanationService:
     @patch("src.services.explanation.httpx.AsyncClient")
     async def test_graceful_fallback_on_timeout(self, mock_client_cls, service):
         import httpx
+
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
@@ -93,7 +101,9 @@ class TestExplanationService:
         assert result.explanation_available is False
 
     @patch("src.services.explanation.httpx.AsyncClient")
-    async def test_graceful_fallback_when_response_schema_invalid(self, mock_client_cls, service):
+    async def test_graceful_fallback_when_response_schema_invalid(
+        self, mock_client_cls, service
+    ):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "not valid json at all"}

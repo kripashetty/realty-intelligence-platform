@@ -3,7 +3,7 @@ import io
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 REQUIRED_COLUMNS = {"address", "price", "size", "rooms", "url", "date", "provider"}
@@ -37,7 +37,7 @@ def parse_listing_date(value: str) -> date:
             continue
     if parsed is None:
         raise ValueError(f"Cannot parse date: {value!r}")
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     if parsed > today:
         raise ValueError(f"Date {parsed} is in the future")
     if parsed < today - timedelta(days=365):
@@ -130,12 +130,17 @@ class CsvImportService:
         for i, raw_row in enumerate(reader, start=2):
             result.total_rows += 1
 
-            # Extra fields land under the None key when commas appear inside unquoted values.
+            # Extra fields land under None when commas appear inside unquoted values.
             if None in raw_row:
-                result.skip_reasons.append({
-                    "row_number": i,
-                    "reason": "Row has too many fields — unquoted comma inside a text value",
-                })
+                result.skip_reasons.append(
+                    {
+                        "row_number": i,
+                        "reason": (
+                            "Row has too many fields"
+                            " — unquoted comma inside a text value"
+                        ),
+                    }
+                )
                 continue
 
             row = {k.lower().strip(): (v or "") for k, v in raw_row.items()}
@@ -149,7 +154,10 @@ class CsvImportService:
             dedup_key = (validated["source_url"], str(validated["listing_date"]))
             if dedup_key in seen:
                 result.skip_reasons.append(
-                    {"row_number": i, "reason": "Duplicate listing (url + date already exists)"}
+                    {
+                        "row_number": i,
+                        "reason": "Duplicate listing (url + date already exists)",
+                    }
                 )
                 continue
             seen.add(dedup_key)
@@ -157,14 +165,14 @@ class CsvImportService:
 
         return result
 
-    async def bulk_insert(self, db, batch_id: uuid.UUID, valid_rows: list[dict]) -> None:
-        from datetime import timezone
+    async def bulk_insert(
+        self, db, batch_id: uuid.UUID, valid_rows: list[dict]
+    ) -> None:
 
-        from sqlalchemy import text
 
         from src.models.listing import Listing
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         listings = [
             Listing(
                 import_batch_id=batch_id,

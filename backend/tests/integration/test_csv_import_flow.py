@@ -1,15 +1,12 @@
 """T025 — Integration test for full CSV import flow.
 
 Written before implementation (TDD red phase).
-Tests the complete path: upload CSV → batch created → rows inserted → geocoding triggered.
+Tests: upload CSV → batch created → rows inserted → geocoding triggered.
 Requires a live test database (conftest.py wires this up).
 """
+
 import io
-import uuid
 from unittest.mock import AsyncMock, patch
-
-import pytest
-
 
 SAMPLE_CSV = """\
 title,address,price,size,rooms,floor,url,date,provider
@@ -20,13 +17,19 @@ Big apartment,Karl-Marx-Allee 1 10178 Berlin,2100.00,110.0,4.0,5,https://example
 
 
 class TestCsvImportFlow:
-    @patch("src.services.geocoding.GeocodingService.geocode_batch", new_callable=AsyncMock)
-    async def test_upload_creates_batch_and_inserts_rows(self, mock_geocode, client, db_session):
+    @patch(
+        "src.services.geocoding.GeocodingService.geocode_batch", new_callable=AsyncMock
+    )
+    async def test_upload_creates_batch_and_inserts_rows(
+        self, mock_geocode, client, db_session
+    ):
         mock_geocode.return_value = [(52.52, 13.40)] * 3
 
         response = await client.post(
             "/api/v1/listings/import",
-            files={"file": ("listings.csv", io.BytesIO(SAMPLE_CSV.encode()), "text/csv")},
+            files={
+                "file": ("listings.csv", io.BytesIO(SAMPLE_CSV.encode()), "text/csv")
+            },
         )
         assert response.status_code == 202
         batch_id = response.json()["batch_id"]
@@ -40,7 +43,9 @@ class TestCsvImportFlow:
         assert body["imported_rows"] == 3
         assert body["skipped_rows"] == 0
 
-    @patch("src.services.geocoding.GeocodingService.geocode_batch", new_callable=AsyncMock)
+    @patch(
+        "src.services.geocoding.GeocodingService.geocode_batch", new_callable=AsyncMock
+    )
     async def test_duplicate_rows_are_counted_as_skipped(self, mock_geocode, client):
         mock_geocode.return_value = [(52.52, 13.40)]
 
@@ -62,13 +67,17 @@ class TestCsvImportFlow:
         assert body["imported_rows"] == 1
         assert body["skipped_rows"] == 1
 
-    @patch("src.services.geocoding.GeocodingService.geocode_batch", new_callable=AsyncMock)
+    @patch(
+        "src.services.geocoding.GeocodingService.geocode_batch", new_callable=AsyncMock
+    )
     async def test_status_endpoint_reflects_imported_data(self, mock_geocode, client):
         mock_geocode.return_value = [(52.52, 13.40)] * 3
 
         await client.post(
             "/api/v1/listings/import",
-            files={"file": ("listings.csv", io.BytesIO(SAMPLE_CSV.encode()), "text/csv")},
+            files={
+                "file": ("listings.csv", io.BytesIO(SAMPLE_CSV.encode()), "text/csv")
+            },
         )
 
         status = await client.get("/api/v1/listings/status")
