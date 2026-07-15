@@ -4,6 +4,7 @@ Written before implementation (TDD red phase).
 src.services.geocoding does not exist yet.
 Nominatim calls are mocked — no live API calls in tests.
 """
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -30,7 +31,9 @@ class TestGeocodingService:
         assert lng == pytest.approx(13.4050)
 
     @patch("src.services.geocoding.Nominatim")
-    async def test_returns_none_tuple_when_address_not_found(self, mock_nom_cls, service):
+    async def test_returns_none_tuple_when_address_not_found(
+        self, mock_nom_cls, service
+    ):
         mock_geocoder = MagicMock()
         mock_geocoder.geocode.return_value = None
         mock_nom_cls.return_value = mock_geocoder
@@ -40,7 +43,9 @@ class TestGeocodingService:
         assert lng is None
 
     @patch("src.services.geocoding.Nominatim")
-    async def test_returns_none_tuple_on_geocoding_exception(self, mock_nom_cls, service):
+    async def test_returns_none_tuple_on_geocoding_exception(
+        self, mock_nom_cls, service
+    ):
         mock_geocoder = MagicMock()
         mock_geocoder.geocode.side_effect = Exception("Network error")
         mock_nom_cls.return_value = mock_geocoder
@@ -54,7 +59,9 @@ class TestGeocodingService:
             "Invalidenstraße 50, 10115 Berlin",
             "Unter den Linden 1, 10117 Berlin",
         ]
-        with patch.object(service, "geocode", new=AsyncMock(return_value=(52.52, 13.40))):
+        with patch.object(
+            service, "geocode", new=AsyncMock(return_value=(52.52, 13.40))
+        ):
             results = await service.geocode_batch(addresses)
         assert len(results) == 2
         assert all(r[0] == pytest.approx(52.52) for r in results)
@@ -66,6 +73,8 @@ class TestGeocodingService:
             return (52.52, 13.40)
 
         with patch.object(service, "geocode", new=AsyncMock(side_effect=side_effect)):
-            results = await service.geocode_batch(["Good Address Berlin", "Bad Address"])
+            results = await service.geocode_batch(
+                ["Good Address Berlin", "Bad Address"]
+            )
         assert results[0] == (pytest.approx(52.52), pytest.approx(13.40))
         assert results[1] == (None, None)

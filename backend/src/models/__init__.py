@@ -1,6 +1,6 @@
-from src.models.import_batch import ImportBatch, ImportStatus, GeocodingStatus
+from src.models.import_batch import GeocodingStatus, ImportBatch, ImportStatus
 from src.models.listing import Listing
-from src.models.recommendation import PricingRecommendation, ConfidenceLevel
+from src.models.recommendation import ConfidenceLevel, PricingRecommendation
 
 __all__ = [
     "ImportBatch",

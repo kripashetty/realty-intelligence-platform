@@ -4,7 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-
 VALID_AMENITIES = {"balcony", "parking", "elevator", "furnished", "garden", "cellar"}
 
 
@@ -19,7 +18,9 @@ class ApartmentRequest(BaseModel):
         if self.amenities:
             invalid = set(self.amenities) - VALID_AMENITIES
             if invalid:
-                raise ValueError(f"Invalid amenities: {invalid}. Must be one of {VALID_AMENITIES}")
+                raise ValueError(
+                    f"Invalid amenities: {invalid}. Must be one of {VALID_AMENITIES}"
+                )
 
 
 class ConfidenceRange(BaseModel):

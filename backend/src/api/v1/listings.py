@@ -1,5 +1,5 @@
 import uuid
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile
 from sqlalchemy import func, select
@@ -41,14 +41,20 @@ async def upload_csv(
         if file.content_type and "csv" not in file.content_type:
             raise HTTPException(
                 status_code=400,
-                detail={"error": "invalid_file", "message": "File must be a non-empty CSV."},
+                detail={
+                    "error": "invalid_file",
+                    "message": "File must be a non-empty CSV.",
+                },
             )
 
     contents = await file.read()
     if not contents:
         raise HTTPException(
             status_code=400,
-            detail={"error": "invalid_file", "message": "File must be a non-empty CSV."},
+            detail={
+                "error": "invalid_file",
+                "message": "File must be a non-empty CSV.",
+            },
         )
 
     import io
@@ -75,7 +81,7 @@ async def upload_csv(
         )
 
     batch = ImportBatch(
-        uploaded_at=datetime.now(timezone.utc),
+        uploaded_at=datetime.now(UTC),
         total_rows=parse_result.total_rows,
         imported_rows=len(parse_result.valid_rows),
         skipped_rows=len(parse_result.skip_reasons),
@@ -134,9 +140,7 @@ async def get_dataset_status(db: AsyncSession = Depends(get_db)):
     total = await db.scalar(select(func.count()).select_from(Listing))
 
     latest_batch_result = await db.execute(
-        select(ImportBatch)
-        .order_by(ImportBatch.uploaded_at.desc())
-        .limit(1)
+        select(ImportBatch).order_by(ImportBatch.uploaded_at.desc()).limit(1)
     )
     latest = latest_batch_result.scalar_one_or_none()
 

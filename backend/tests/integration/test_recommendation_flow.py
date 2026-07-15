@@ -3,11 +3,11 @@
 Written before implementation (TDD red phase).
 Requires live test DB + mocked Ollama.
 """
+
 import io
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 
 SAMPLE_CSV = """\
 title,address,price,size,rooms,floor,url,date,provider
@@ -65,7 +65,9 @@ class TestRecommendationFlow:
         ):
             upload = await client.post(
                 "/api/v1/listings/import",
-                files={"file": ("data.csv", io.BytesIO(SAMPLE_CSV.encode()), "text/csv")},
+                files={
+                    "file": ("data.csv", io.BytesIO(SAMPLE_CSV.encode()), "text/csv")
+                },
             )
         assert upload.status_code == 202
 
@@ -85,7 +87,9 @@ class TestRecommendationFlow:
         ):
             await client.post(
                 "/api/v1/listings/import",
-                files={"file": ("data.csv", io.BytesIO(SAMPLE_CSV.encode()), "text/csv")},
+                files={
+                    "file": ("data.csv", io.BytesIO(SAMPLE_CSV.encode()), "text/csv")
+                },
             )
 
         response = await client.post("/api/v1/recommendations", json=APARTMENT_REQUEST)

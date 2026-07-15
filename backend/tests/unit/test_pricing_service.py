@@ -3,6 +3,7 @@
 Written before implementation (TDD red phase).
 src.services.pricing does not exist yet.
 """
+
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -25,10 +26,14 @@ class TestPricingService:
     def test_median_price_is_recommended(self, service):
         listings = [_make_listing(p) for p in [1000, 1200, 1400, 1600, 1800]]
         result = service.calculate(listings)
-        assert result.recommended_price_eur == pytest.approx(Decimal("1400.00"), abs=Decimal("0.01"))
+        assert result.recommended_price_eur == pytest.approx(
+            Decimal("1400.00"), abs=Decimal("0.01")
+        )
 
     def test_confidence_range_is_25th_75th_percentile(self, service):
-        listings = [_make_listing(p) for p in [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700]]
+        listings = [
+            _make_listing(p) for p in [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700]
+        ]
         result = service.calculate(listings)
         assert result.confidence_low_eur <= result.recommended_price_eur
         assert result.confidence_high_eur >= result.recommended_price_eur

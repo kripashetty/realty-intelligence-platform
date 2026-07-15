@@ -4,10 +4,9 @@ These tests are written BEFORE implementation (TDD red phase).
 They import from src.api.v1.listings which does not yet exist —
 all tests must fail until T026–T029 are implemented.
 """
+
 import io
 import uuid
-
-import pytest
 
 
 class TestPostListingsImport:
@@ -21,7 +20,9 @@ class TestPostListingsImport:
         )
         response = await client.post(
             "/api/v1/listings/import",
-            files={"file": ("listings.csv", io.BytesIO(csv_content.encode()), "text/csv")},
+            files={
+                "file": ("listings.csv", io.BytesIO(csv_content.encode()), "text/csv")
+            },
         )
         assert response.status_code == 202
         body = response.json()
@@ -72,7 +73,9 @@ class TestGetImportBatchStatus:
         )
         create_response = await client.post(
             "/api/v1/listings/import",
-            files={"file": ("listings.csv", io.BytesIO(csv_content.encode()), "text/csv")},
+            files={
+                "file": ("listings.csv", io.BytesIO(csv_content.encode()), "text/csv")
+            },
         )
         assert create_response.status_code == 202
         batch_id = create_response.json()["batch_id"]

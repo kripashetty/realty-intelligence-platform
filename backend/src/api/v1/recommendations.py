@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.db import get_db
 from src.models.import_batch import ImportBatch
 from src.models.listing import Listing
-from src.models.recommendation import ConfidenceLevel, PricingRecommendation
+from src.models.recommendation import PricingRecommendation
 from src.schemas.recommendations import (
     ApartmentRequest,
     ConfidenceRange,
@@ -85,10 +85,9 @@ async def get_recommendation(
         select(ImportBatch).order_by(ImportBatch.uploaded_at.desc()).limit(1)
     )
     latest_batch = latest_batch_result.scalar_one_or_none()
-    now = datetime.now(timezone.utc)
-    is_stale = (
-        latest_batch is None
-        or (now - latest_batch.uploaded_at) > timedelta(hours=_STALE_HOURS)
+    now = datetime.now(UTC)
+    is_stale = latest_batch is None or (now - latest_batch.uploaded_at) > timedelta(
+        hours=_STALE_HOURS
     )
 
     # LLM explanation
@@ -105,7 +104,9 @@ async def get_recommendation(
 
     # Persist recommendation
     comparable_ids = [str(c.id) for c in comparables]
-    factors_data = explanation_result.factors if explanation_result.explanation_available else []
+    factors_data = (
+        explanation_result.factors if explanation_result.explanation_available else []
+    )
 
     rec = PricingRecommendation(
         generated_at=now,

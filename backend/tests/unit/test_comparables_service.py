@@ -3,7 +3,7 @@
 Written before implementation (TDD red phase).
 src.services.comparables does not exist yet.
 """
-import math
+
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
@@ -52,11 +52,15 @@ class TestComparablesService:
         mock_db.__aexit__ = AsyncMock(return_value=None)
 
         with pytest.MonkeyPatch().context() as mp:
-            mp.setattr(service, "_bounding_box_query", AsyncMock(return_value=[near, far]))
+            mp.setattr(
+                service, "_bounding_box_query", AsyncMock(return_value=[near, far])
+            )
             results = await service.find_comparables(
                 db=mock_db,
-                lat=52.52, lng=13.40,
-                size_m2=65.0, rooms=2.0,
+                lat=52.52,
+                lng=13.40,
+                size_m2=65.0,
+                rooms=2.0,
                 radius_km=2.0,
             )
         assert near in results
@@ -64,30 +68,46 @@ class TestComparablesService:
 
     async def test_filters_by_size_within_20_percent(self, service):
         target_size = 65.0
-        within = self._make_listing(1200, 70, 2)   # 70/65 ≈ 1.077 — within 20%
+        within = self._make_listing(1200, 70, 2)  # 70/65 ≈ 1.077 — within 20%
         outside = self._make_listing(1200, 100, 2)  # 100/65 ≈ 1.538 — outside 20%
 
         mock_db = AsyncMock()
         with pytest.MonkeyPatch().context() as mp:
-            mp.setattr(service, "_bounding_box_query", AsyncMock(return_value=[within, outside]))
+            mp.setattr(
+                service,
+                "_bounding_box_query",
+                AsyncMock(return_value=[within, outside]),
+            )
             results = await service.find_comparables(
-                db=mock_db, lat=52.52, lng=13.40,
-                size_m2=target_size, rooms=2.0, radius_km=2.0,
+                db=mock_db,
+                lat=52.52,
+                lng=13.40,
+                size_m2=target_size,
+                rooms=2.0,
+                radius_km=2.0,
             )
         assert within in results
         assert outside not in results
 
     async def test_filters_by_rooms_within_one(self, service):
         target_rooms = 3.0
-        within = self._make_listing(1200, 65, 2.5)   # |2.5-3| = 0.5 ≤ 1
+        within = self._make_listing(1200, 65, 2.5)  # |2.5-3| = 0.5 ≤ 1
         outside = self._make_listing(1200, 65, 5.0)  # |5-3| = 2 > 1
 
         mock_db = AsyncMock()
         with pytest.MonkeyPatch().context() as mp:
-            mp.setattr(service, "_bounding_box_query", AsyncMock(return_value=[within, outside]))
+            mp.setattr(
+                service,
+                "_bounding_box_query",
+                AsyncMock(return_value=[within, outside]),
+            )
             results = await service.find_comparables(
-                db=mock_db, lat=52.52, lng=13.40,
-                size_m2=65.0, rooms=target_rooms, radius_km=2.0,
+                db=mock_db,
+                lat=52.52,
+                lng=13.40,
+                size_m2=65.0,
+                rooms=target_rooms,
+                radius_km=2.0,
             )
         assert within in results
         assert outside not in results
@@ -97,7 +117,11 @@ class TestComparablesService:
         with pytest.MonkeyPatch().context() as mp:
             mp.setattr(service, "_bounding_box_query", AsyncMock(return_value=[]))
             results = await service.find_comparables(
-                db=mock_db, lat=52.52, lng=13.40,
-                size_m2=65.0, rooms=2.0, radius_km=2.0,
+                db=mock_db,
+                lat=52.52,
+                lng=13.40,
+                size_m2=65.0,
+                rooms=2.0,
+                radius_km=2.0,
             )
         assert results == []

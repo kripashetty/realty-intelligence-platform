@@ -3,8 +3,8 @@
 Written before implementation (TDD red phase).
 src.api.v1.recommendations does not exist yet.
 """
-import pytest
 
+import pytest
 
 VALID_REQUEST = {
     "address": "Invalidenstraße 50, 10115 Berlin",
