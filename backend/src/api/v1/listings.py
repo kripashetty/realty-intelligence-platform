@@ -103,7 +103,7 @@ async def upload_csv(
 
     return ImportBatchResponse(
         batch_id=batch.id,
-        status=batch.status,
+        status=ImportStatus.processing,
         message=f"Import started. Poll /api/v1/listings/import/{batch.id} for status.",
     )
 

@@ -7,6 +7,16 @@ all tests must fail until T026–T029 are implemented.
 
 import io
 import uuid
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def no_background_geocoding():
+    """Prevent _run_geocoding from opening a competing DB session during tests."""
+    with patch("src.api.v1.listings._run_geocoding", new=AsyncMock()):
+        yield
 
 
 class TestPostListingsImport:
