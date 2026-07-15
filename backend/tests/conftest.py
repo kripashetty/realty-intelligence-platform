@@ -47,12 +47,17 @@ def create_tables():
 # --- Per-test DB session (each test gets its own connection via NullPool) ---
 
 @pytest_asyncio.fixture
-async def db_session(create_tables):  # noqa: F811  # triggers create_tables for DB tests
+async def db_session(create_tables):
     engine = _make_engine()
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with factory() as session:
         yield session
         await session.rollback()
+    # Endpoints call session.commit(), so rollback alone can't undo committed data.
+    # Delete all rows (reverse FK order) so each test starts clean.
+    async with engine.begin() as conn:
+        for table in reversed(Base.metadata.sorted_tables):
+            await conn.execute(table.delete())
     await engine.dispose()
 
 
