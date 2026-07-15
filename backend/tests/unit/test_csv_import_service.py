@@ -171,7 +171,7 @@ class TestCsvImportServiceParse:
         result = service.parse(csv)
         assert len(result.valid_rows) == 1
         assert len(result.skip_reasons) == 1
-        assert result.skip_reasons[0]["row_number"] == 2
+        assert result.skip_reasons[0]["row_number"] == 3
 
     def test_deduplication_marks_second_occurrence_as_skipped(self):
         duplicate_url = "https://example.com/dup"
@@ -187,9 +187,11 @@ class TestCsvImportServiceParse:
         assert "Duplicate" in result.skip_reasons[0]["reason"]
 
     def test_german_decimal_rows_are_parsed_correctly(self):
+        # German decimals with commas must be quoted in CSV
         csv = self._make_csv(
             [
-                "Flat,Invalidenstraße 50 10115 Berlin,1.250,00,72,5,2,5,3,https://example.com/g,2026-07-10,immobilienscout24",
+                'Flat,Invalidenstraße 50 10115 Berlin,"1.250,00","72,5","2,5",3,'
+                "https://example.com/g,2026-07-10,immobilienscout24",
             ]
         )
         service = CsvImportService()

@@ -17,9 +17,9 @@ class TestHaversineKm:
         assert haversine_km(52.52, 13.40, 52.52, 13.40) == pytest.approx(0.0)
 
     def test_known_berlin_distance(self):
-        # Brandenburger Tor to Alexanderplatz ~3.2km
+        # Brandenburger Tor to Alexanderplatz ~2.48km
         km = haversine_km(52.5163, 13.3777, 52.5219, 13.4132)
-        assert 2.5 < km < 4.0
+        assert 2.0 < km < 4.0
 
     def test_symmetry(self):
         d1 = haversine_km(52.52, 13.40, 52.53, 13.41)
