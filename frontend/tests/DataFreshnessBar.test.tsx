@@ -55,7 +55,8 @@ describe('DataFreshnessBar', () => {
 
   it('shows stale warning when is_stale is true', () => {
     render(<DataFreshnessBar status={STALE_STATUS} isStale={true} />, { wrapper })
-    expect(screen.getByText(/stale|outdated|upload/i)).toBeInTheDocument()
+    // "upload" also appears in "Last upload:" in the main span — use warning-only text
+    expect(screen.getByText(/Data is stale/i)).toBeInTheDocument()
   })
 
   it('shows empty state prompt when no data uploaded', () => {

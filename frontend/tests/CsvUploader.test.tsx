@@ -3,7 +3,7 @@
  * Written before implementation (TDD red phase).
  * CsvUploader does not exist yet.
  */
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -25,12 +25,13 @@ describe('CsvUploader', () => {
   })
 
   it('shows an error when a non-CSV file is selected', async () => {
-    const user = userEvent.setup()
     render(<CsvUploader onImportComplete={vi.fn()} />, { wrapper })
     const file = new File(['not csv'], 'data.txt', { type: 'text/plain' })
-    const input = screen.getByTestId('csv-file-input')
-    await user.upload(input, file)
-    expect(screen.getByText(/csv file/i)).toBeInTheDocument()
+    // fireEvent bypasses pointer/visibility checks that block userEvent on hidden inputs
+    fireEvent.change(screen.getByTestId('csv-file-input'), { target: { files: [file] } })
+    await waitFor(() => {
+      expect(screen.getByText(/csv file/i)).toBeInTheDocument()
+    })
   })
 
   it('calls upload API when a CSV file is selected', async () => {

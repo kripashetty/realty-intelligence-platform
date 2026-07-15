@@ -34,13 +34,15 @@ const MOCK_RESULT: RecommendationResponse = {
 describe('RecommendationResult', () => {
   it('renders the recommended price', () => {
     render(<RecommendationResult result={MOCK_RESULT} />)
-    expect(screen.getByText(/1.250/i)).toBeInTheDocument()
+    // Escaped dot: matches German-formatted "1.250", not factor value "1,250"
+    expect(screen.getByText(/1\.250/)).toBeInTheDocument()
   })
 
   it('renders the confidence range', () => {
     render(<RecommendationResult result={MOCK_RESULT} />)
-    expect(screen.getByText(/1.100/i)).toBeInTheDocument()
-    expect(screen.getByText(/1.420/i)).toBeInTheDocument()
+    // Escaped dots: matches formatted "1.100"/"1.420", not factor "1,100"/"1,420"
+    expect(screen.getByText(/1\.100/)).toBeInTheDocument()
+    expect(screen.getByText(/1\.420/)).toBeInTheDocument()
   })
 
   it('renders the confidence level badge', () => {
@@ -50,7 +52,8 @@ describe('RecommendationResult', () => {
 
   it('renders comparable count', () => {
     render(<RecommendationResult result={MOCK_RESULT} />)
-    expect(screen.getByText(/23/)).toBeInTheDocument()
+    // '23' also appears in explanation/factor text; scope to the <strong> in stats
+    expect(screen.getByText('23', { selector: 'strong' })).toBeInTheDocument()
   })
 
   it('renders percentile rank', () => {
