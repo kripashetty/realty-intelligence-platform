@@ -8,6 +8,15 @@ Requires a live test database (conftest.py wires this up).
 import io
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def no_background_geocoding():
+    """Prevent _run_geocoding from opening a competing DB session during tests."""
+    with patch("src.api.v1.listings._run_geocoding", new=AsyncMock()):
+        yield
+
 SAMPLE_CSV = """\
 title,address,price,size,rooms,floor,url,date,provider
 Nice flat,Invalidenstraße 50 10115 Berlin,1200.00,65.0,2.0,3,https://example.com/flow-1,2026-07-10,immobilienscout24

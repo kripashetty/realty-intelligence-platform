@@ -3,6 +3,7 @@ import os
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 os.environ.setdefault(
     "DATABASE_URL", "postgresql+asyncpg://realty:realty@localhost:5432/realty_test"
@@ -13,7 +14,7 @@ from src.main import app  # noqa: E402
 
 TEST_DATABASE_URL = os.environ["DATABASE_URL"]
 
-_engine = create_async_engine(TEST_DATABASE_URL)
+_engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
 _TestSessionLocal = async_sessionmaker(
     _engine, class_=AsyncSession, expire_on_commit=False
 )

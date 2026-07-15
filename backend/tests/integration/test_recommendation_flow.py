@@ -9,6 +9,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+
+@pytest.fixture(autouse=True)
+def no_background_geocoding():
+    """Prevent _run_geocoding from opening a competing DB session during tests."""
+    with patch("src.api.v1.listings._run_geocoding", new=AsyncMock()):
+        yield
+
 SAMPLE_CSV = """\
 title,address,price,size,rooms,floor,url,date,provider
 Flat A,Invalidenstraße 50 10115 Berlin,1100.00,60.0,3.0,1,https://example.com/rec-1,2026-07-10,immobilienscout24
