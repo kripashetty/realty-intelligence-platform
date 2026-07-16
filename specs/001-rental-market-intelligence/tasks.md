@@ -19,10 +19,10 @@ and confirmed failing before any implementation task begins. Red → Green → R
 |-------|------|-------|--------|
 | **Phase 1: Setup** | Project structure, tooling, Dockerfiles, fixture CSV | T001–T010 (10 tasks) | ✅ Complete |
 | **Phase 2: Foundational** | DB models, migrations, FastAPI skeleton, Bicep infra | T011–T021 (11 tasks) | ✅ Complete |
-| **Phase 3: US1 — CSV Import** | CSV upload endpoint + validation + background geocoding (FR-001, FR-002) | T022–T029 (8 tasks) | ⬜ Not started |
-| **Phase 3: US1 — Recommendation** | Comparable filter + statistical pricing + Ollama explanation (FR-003–FR-006, FR-009) | T030–T039 (10 tasks) | ⬜ Not started |
-| **Phase 3: US1 — Frontend** | React components: form, uploader, result, freshness bar | T040–T049 (10 tasks) | ⬜ Not started |
-| **Phase 4: Polish & CI/CD** | GitHub Actions pipelines, end-to-end validation, README | T050–T053 (4 tasks) | ⬜ Not started |
+| **Phase 3: US1 — CSV Import** | CSV upload endpoint + validation + background geocoding (FR-001, FR-002) | T022–T029 (8 tasks) | ✅ Complete |
+| **Phase 3: US1 — Recommendation** | Comparable filter + statistical pricing + Ollama explanation (FR-003–FR-006, FR-009) | T030–T039 (10 tasks) | ✅ Complete |
+| **Phase 3: US1 — Frontend** | React components: form, uploader, result, freshness bar | T040–T049 (10 tasks) | ✅ Complete |
+| **Phase 4: Polish & CI/CD** | GitHub Actions pipelines, end-to-end validation, README | T050–T053 (4 tasks) | 🔄 T052 pending (manual) |
 
 **Total**: 53 tasks across 6 phases · Implement one phase at a time · Create GitHub issues per phase before starting it
 
@@ -109,17 +109,17 @@ verify a recommendation with explanation is returned within 60 seconds.
 
 > Tests MUST fail before T027–T029 are implemented.
 
-- [ ] T022 [US1] Write failing contract tests for `POST /api/v1/listings/import`, `GET /api/v1/listings/import/{batch_id}`, and `GET /api/v1/listings/status` (202, 400, 404, 422 responses) in `backend/tests/contract/test_listings_import.py`
-- [ ] T023 [P] [US1] Write failing unit tests for CSV parsing, row validation, price/size normalization, German decimal handling, and deduplication logic in `backend/tests/unit/test_csv_import_service.py`
-- [ ] T024 [P] [US1] Write failing unit tests for geocoding service (Nominatim address lookup, coordinate storage, NULL handling on failure) in `backend/tests/unit/test_geocoding_service.py`
-- [ ] T025 [P] [US1] Write failing integration test for full CSV import flow: upload CSV → batch created → rows inserted → background geocoding triggered in `backend/tests/integration/test_csv_import_flow.py`
+- [X] T022 [US1] Write failing contract tests for `POST /api/v1/listings/import`, `GET /api/v1/listings/import/{batch_id}`, and `GET /api/v1/listings/status` (202, 400, 404, 422 responses) in `backend/tests/contract/test_listings_import.py`
+- [X] T023 [P] [US1] Write failing unit tests for CSV parsing, row validation, price/size normalization, German decimal handling, and deduplication logic in `backend/tests/unit/test_csv_import_service.py`
+- [X] T024 [P] [US1] Write failing unit tests for geocoding service (Nominatim address lookup, coordinate storage, NULL handling on failure) in `backend/tests/unit/test_geocoding_service.py`
+- [X] T025 [P] [US1] Write failing integration test for full CSV import flow: upload CSV → batch created → rows inserted → background geocoding triggered in `backend/tests/integration/test_csv_import_flow.py`
 
 ### Backend — CSV Import Implementation
 
-- [ ] T026 [P] [US1] Create listing import/status Pydantic request and response schemas in `backend/src/schemas/listings.py`
-- [ ] T027 [US1] Implement `csv_import` service: CSV parse (pandas), row validation, price/size/date normalization, deduplication, bulk insert via SQLAlchemy in `backend/src/services/csv_import.py` (depends on T026)
-- [ ] T028 [US1] Implement `geocoding` background task service: Nominatim lookup via geopy, 1 req/sec rate limiting, update listing lat/lng, update `import_batch.geocoding_status` in `backend/src/services/geocoding.py` (depends on T027)
-- [ ] T029 [US1] Implement listings API router: `POST /import` (accepts CSV, starts background geocoding), `GET /import/{batch_id}`, `GET /status` in `backend/src/api/v1/listings.py` (depends on T026, T027, T028)
+- [X] T026 [P] [US1] Create listing import/status Pydantic request and response schemas in `backend/src/schemas/listings.py`
+- [X] T027 [US1] Implement `csv_import` service: CSV parse (pandas), row validation, price/size/date normalization, deduplication, bulk insert via SQLAlchemy in `backend/src/services/csv_import.py` (depends on T026)
+- [X] T028 [US1] Implement `geocoding` background task service: Nominatim lookup via geopy, 1 req/sec rate limiting, update listing lat/lng, update `import_batch.geocoding_status` in `backend/src/services/geocoding.py` (depends on T027)
+- [X] T029 [US1] Implement listings API router: `POST /import` (accepts CSV, starts background geocoding), `GET /import/{batch_id}`, `GET /status` in `backend/src/api/v1/listings.py` (depends on T026, T027, T028)
 
 **Checkpoint**: CSV upload flow complete and contract tests passing.
 
@@ -129,19 +129,19 @@ verify a recommendation with explanation is returned within 60 seconds.
 
 > Tests MUST fail before T036–T039 are implemented.
 
-- [ ] T030 [US1] Write failing contract tests for `POST /api/v1/recommendations` (200 with all fields, 422 validation errors, 503 no-data state) in `backend/tests/contract/test_recommendations.py`
-- [ ] T031 [P] [US1] Write failing unit tests for comparables service: bounding-box SQL pre-filter, Haversine distance calculation, ±20% size filter, ±1 room filter in `backend/tests/unit/test_comparables_service.py`
-- [ ] T032 [P] [US1] Write failing unit tests for pricing service: median calculation, 25th/75th percentile confidence range, percentile rank, `confidence_level` thresholds (high/medium/low) in `backend/tests/unit/test_pricing_service.py`
-- [ ] T033 [P] [US1] Write failing unit tests for explanation service: Ollama HTTP call via httpx, prompt construction with real data, response schema validation, graceful fallback when Ollama unreachable in `backend/tests/unit/test_explanation_service.py`
-- [ ] T034 [P] [US1] Write failing integration test for full recommendation flow: apartment input → comparable filter → statistical analysis → Ollama explanation → structured response in `backend/tests/integration/test_recommendation_flow.py`
+- [X] T030 [US1] Write failing contract tests for `POST /api/v1/recommendations` (200 with all fields, 422 validation errors, 503 no-data state) in `backend/tests/contract/test_recommendations.py`
+- [X] T031 [P] [US1] Write failing unit tests for comparables service: bounding-box SQL pre-filter, Haversine distance calculation, ±20% size filter, ±1 room filter in `backend/tests/unit/test_comparables_service.py`
+- [X] T032 [P] [US1] Write failing unit tests for pricing service: median calculation, 25th/75th percentile confidence range, percentile rank, `confidence_level` thresholds (high/medium/low) in `backend/tests/unit/test_pricing_service.py`
+- [X] T033 [P] [US1] Write failing unit tests for explanation service: Ollama HTTP call via httpx, prompt construction with real data, response schema validation, graceful fallback when Ollama unreachable in `backend/tests/unit/test_explanation_service.py`
+- [X] T034 [P] [US1] Write failing integration test for full recommendation flow: apartment input → comparable filter → statistical analysis → Ollama explanation → structured response in `backend/tests/integration/test_recommendation_flow.py`
 
 ### Backend — Recommendation Implementation
 
-- [ ] T035 [P] [US1] Create recommendation request/response Pydantic schemas (including `factors`, `confidence_range`, `data_freshness`, `explanation_available` fields per `contracts/api-v1.md`) in `backend/src/schemas/recommendations.py`
-- [ ] T036 [US1] Implement `comparables` service: bounding-box SQL pre-filter (±0.018° lat/lng), Python Haversine distance, size ±20%, rooms ±1 filters in `backend/src/services/comparables.py` (depends on T035)
-- [ ] T037 [US1] Implement `pricing` service: median recommended price, 25th/75th percentile confidence range, `scipy.stats.percentileofscore` percentile rank, `confidence_level` classification in `backend/src/services/pricing.py` (depends on T036)
-- [ ] T038 [US1] Implement `explanation` service: httpx async call to Ollama (`http://ollama:11434/api/generate`), structured prompt with real comparable stats, JSON schema validation of response, 45s timeout with graceful fallback in `backend/src/services/explanation.py` (depends on T037)
-- [ ] T039 [US1] Implement recommendations API router: geocode apartment address, call comparables → pricing → explanation services, assemble and return full response, handle no-data 503 in `backend/src/api/v1/recommendations.py` (depends on T035, T036, T037, T038)
+- [X] T035 [P] [US1] Create recommendation request/response Pydantic schemas (including `factors`, `confidence_range`, `data_freshness`, `explanation_available` fields per `contracts/api-v1.md`) in `backend/src/schemas/recommendations.py`
+- [X] T036 [US1] Implement `comparables` service: bounding-box SQL pre-filter (±0.018° lat/lng), Python Haversine distance, size ±20%, rooms ±1 filters in `backend/src/services/comparables.py` (depends on T035)
+- [X] T037 [US1] Implement `pricing` service: median recommended price, 25th/75th percentile confidence range, `scipy.stats.percentileofscore` percentile rank, `confidence_level` classification in `backend/src/services/pricing.py` (depends on T036)
+- [X] T038 [US1] Implement `explanation` service: httpx async call to Ollama (`http://ollama:11434/api/generate`), structured prompt with real comparable stats, JSON schema validation of response, 45s timeout with graceful fallback in `backend/src/services/explanation.py` (depends on T037)
+- [X] T039 [US1] Implement recommendations API router: geocode apartment address, call comparables → pricing → explanation services, assemble and return full response, handle no-data 503 in `backend/src/api/v1/recommendations.py` (depends on T035, T036, T037, T038)
 
 **Checkpoint**: Full backend recommendation flow complete and all backend tests passing.
 
@@ -151,19 +151,19 @@ verify a recommendation with explanation is returned within 60 seconds.
 
 > Tests MUST fail before T044–T049 are implemented.
 
-- [ ] T040 [P] [US1] Write failing component tests for `ApartmentForm`: renders all fields, validates required fields, calls onSubmit with correct payload in `frontend/tests/ApartmentForm.test.tsx`
-- [ ] T041 [P] [US1] Write failing component tests for `CsvUploader`: file selection, upload triggers POST, polls batch status, displays import report (imported/skipped counts) in `frontend/tests/CsvUploader.test.tsx`
-- [ ] T042 [P] [US1] Write failing component tests for `RecommendationResult`: renders price, confidence range, explanation text, 3 factors, percentile rank, and confidence level badge in `frontend/tests/RecommendationResult.test.tsx`
-- [ ] T043 [P] [US1] Write failing component tests for `DataFreshnessBar`: shows last upload time, listing count, stale warning when `is_stale: true`, empty state prompt in `frontend/tests/DataFreshnessBar.test.tsx`
+- [X] T040 [P] [US1] Write failing component tests for `ApartmentForm`: renders all fields, validates required fields, calls onSubmit with correct payload in `frontend/tests/ApartmentForm.test.tsx`
+- [X] T041 [P] [US1] Write failing component tests for `CsvUploader`: file selection, upload triggers POST, polls batch status, displays import report (imported/skipped counts) in `frontend/tests/CsvUploader.test.tsx`
+- [X] T042 [P] [US1] Write failing component tests for `RecommendationResult`: renders price, confidence range, explanation text, 3 factors, percentile rank, and confidence level badge in `frontend/tests/RecommendationResult.test.tsx`
+- [X] T043 [P] [US1] Write failing component tests for `DataFreshnessBar`: shows last upload time, listing count, stale warning when `is_stale: true`, empty state prompt in `frontend/tests/DataFreshnessBar.test.tsx`
 
 ### Frontend — Implementation
 
-- [ ] T044 [P] [US1] Create typed API service layer with wrappers for all 4 endpoints and TypeScript interfaces matching `contracts/api-v1.md` in `frontend/src/services/api.ts`
-- [ ] T045 [P] [US1] Implement `DataFreshnessBar` component (last upload timestamp, listing count, stale warning, auto-refresh via TanStack Query) in `frontend/src/components/DataFreshnessBar.tsx` (depends on T044)
-- [ ] T046 [P] [US1] Implement `CsvUploader` component (file input, POST to import endpoint, poll batch status every 2s until `completed`, display import report) in `frontend/src/components/CsvUploader.tsx` (depends on T044)
-- [ ] T047 [P] [US1] Implement `ApartmentForm` component (address, size\_m2, rooms, floor, amenities checkboxes, React Hook Form validation) in `frontend/src/components/ApartmentForm.tsx` (depends on T044)
-- [ ] T048 [US1] Implement `RecommendationResult` component (recommended price, confidence range, confidence level badge, explanation text, 3 factors list, percentile rank, stale data warning) in `frontend/src/components/RecommendationResult.tsx` (depends on T044)
-- [ ] T049 [US1] Assemble `RecommendationPage` from all components with empty-state handling (no data uploaded yet) in `frontend/src/pages/RecommendationPage.tsx` (depends on T045, T046, T047, T048)
+- [X] T044 [P] [US1] Create typed API service layer with wrappers for all 4 endpoints and TypeScript interfaces matching `contracts/api-v1.md` in `frontend/src/services/api.ts`
+- [X] T045 [P] [US1] Implement `DataFreshnessBar` component (last upload timestamp, listing count, stale warning, auto-refresh via TanStack Query) in `frontend/src/components/DataFreshnessBar.tsx` (depends on T044)
+- [X] T046 [P] [US1] Implement `CsvUploader` component (file input, POST to import endpoint, poll batch status every 2s until `completed`, display import report) in `frontend/src/components/CsvUploader.tsx` (depends on T044)
+- [X] T047 [P] [US1] Implement `ApartmentForm` component (address, size\_m2, rooms, floor, amenities checkboxes, React Hook Form validation) in `frontend/src/components/ApartmentForm.tsx` (depends on T044)
+- [X] T048 [US1] Implement `RecommendationResult` component (recommended price, confidence range, confidence level badge, explanation text, 3 factors list, percentile rank, stale data warning) in `frontend/src/components/RecommendationResult.tsx` (depends on T044)
+- [X] T049 [US1] Assemble `RecommendationPage` from all components with empty-state handling (no data uploaded yet) in `frontend/src/pages/RecommendationPage.tsx` (depends on T045, T046, T047, T048)
 
 **Checkpoint**: US1 fully functional end-to-end. Run quickstart.md Steps 1–7 to validate.
 
@@ -173,10 +173,10 @@ verify a recommendation with explanation is returned within 60 seconds.
 
 **Purpose**: CI pipelines, documentation, and end-to-end validation.
 
-- [ ] T050 [P] Create GitHub Actions backend CI workflow (pytest + ruff on PR; Docker build + push to ACR on merge to main) in `.github/workflows/backend-ci.yml`
-- [ ] T051 [P] Create GitHub Actions frontend CI workflow (vitest + tsc on PR; deploy to Azure Static Web Apps on merge to main) in `.github/workflows/frontend-ci.yml`
+- [X] T050 [P] Create GitHub Actions backend CI workflow (pytest + ruff on PR; Docker build + push to ACR on merge to main) in `.github/workflows/backend-ci.yml`
+- [X] T051 [P] Create GitHub Actions frontend CI workflow (vitest + tsc on PR; deploy to Azure Static Web Apps on merge to main) in `.github/workflows/frontend-ci.yml`
 - [ ] T052 Run all 7 quickstart.md validation steps end-to-end against running stack; confirm all acceptance scenarios pass
-- [ ] T053 [P] Write project setup README covering local dev with docker-compose, Fredy CSV export steps, and environment variable reference in `README.md`
+- [X] T053 [P] Write project setup README covering local dev with docker-compose, Fredy CSV export steps, and environment variable reference in `README.md`
 
 ---
 

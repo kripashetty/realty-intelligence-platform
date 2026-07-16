@@ -1,15 +1,24 @@
 import enum
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Float, Index, Integer, Numeric, SmallInteger, String, Text
+from sqlalchemy import (
+    DateTime,
+    Float,
+    Index,
+    Integer,
+    Numeric,
+    SmallInteger,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.db import Base
 
 
-class ConfidenceLevel(str, enum.Enum):
+class ConfidenceLevel(enum.StrEnum):
     high = "high"
     medium = "medium"
     low = "low"
@@ -19,11 +28,17 @@ class PricingRecommendation(Base):
     __tablename__ = "pricing_recommendations"
     __table_args__ = (Index("ix_pricing_recommendations_generated_at", "generated_at"),)
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    generated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    import_batch_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+    import_batch_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), nullable=False
+    )
     apt_address: Mapped[str] = mapped_column(Text, nullable=False)
     apt_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     apt_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)

@@ -4,16 +4,18 @@ Revision ID: 001
 Revises:
 Create Date: 2026-07-14
 """
-from typing import Sequence, Union
+
+from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 revision: str = "001"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -26,7 +28,9 @@ def upgrade() -> None:
         sa.Column("skipped_rows", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("skip_reasons", postgresql.JSONB(), nullable=True),
         sa.Column("status", sa.String(20), nullable=False, server_default="processing"),
-        sa.Column("geocoding_status", sa.String(20), nullable=False, server_default="pending"),
+        sa.Column(
+            "geocoding_status", sa.String(20), nullable=False, server_default="pending"
+        ),
     )
     op.create_index("ix_import_batches_uploaded_at", "import_batches", ["uploaded_at"])
 
@@ -47,7 +51,9 @@ def upgrade() -> None:
         sa.Column("listing_date", sa.Date(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["import_batch_id"], ["import_batches.id"]),
-        sa.UniqueConstraint("source_url", "listing_date", name="uq_listing_source_url_date"),
+        sa.UniqueConstraint(
+            "source_url", "listing_date", name="uq_listing_source_url_date"
+        ),
     )
     op.create_index("ix_listing_lat_lng", "listings", ["latitude", "longitude"])
     op.create_index("ix_listing_price_eur", "listings", ["price_eur"])
@@ -79,7 +85,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["import_batch_id"], ["import_batches.id"]),
     )
     op.create_index(
-        "ix_pricing_recommendations_generated_at", "pricing_recommendations", ["generated_at"]
+        "ix_pricing_recommendations_generated_at",
+        "pricing_recommendations",
+        ["generated_at"],
     )
 
 
