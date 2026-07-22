@@ -55,7 +55,8 @@ class ExplanationService:
     async def generate(self, apartment: dict, stats: dict) -> ExplanationResult:
         prompt = self._build_prompt(apartment, stats)
         payload = {
-            "model": "llama3.1:8b",
+            # "model": "llama3.1:8b"
+            "model": "qwen2.5:0.5b",
             "prompt": prompt,
             "system": _SYSTEM_PROMPT,
             "stream": False,

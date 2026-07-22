@@ -32,3 +32,10 @@ Thumbs.db
 *.swp
 .vscode/
 .idea/
+
+
+# Infra
+infra/.outputs/
+infra/environment/main.json
+infra/environment/parameters/*.json
+infra/environment/modules/*.json
