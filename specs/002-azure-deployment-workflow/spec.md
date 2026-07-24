@@ -115,14 +115,19 @@ The CI/CD pipeline authenticates to Azure without storing any long-lived credent
 - **SC-005**: A failed deployment (build, migration, or container update) leaves the previous version serving traffic — zero unplanned downtime caused by a failed deploy.
 - **SC-006**: All infrastructure resources are reproducible from IaC — no "snowflake" resources exist that cannot be recreated by running the infrastructure pipeline.
 
+## Implementation Status
+
+- **User Story 2 (Infrastructure Provisioned Reproducibly via Code) — Done, manually verified.** The flat `infra/main.bicep` layout was replaced with layered IaC (`infra/bootstrap/`, `infra/shared/`, `infra/environment/`) and shell scripts (`infra/scripts/deploy-shared.sh`, `deploy-environment.sh`, `deploy-frontend.sh`, `run-migration-job.sh`) that deploy each layer. This has been run and confirmed working by manually invoking the scripts; it is not yet wired into GitHub Actions.
+- **User Story 1, 3, 4 — Not started / stale.** A prior GitHub Actions workflow (`infra.yml`) that called Bicep directly against the old flat layout was removed (`dffada7`, "deployment strategy to be reworked in separate task") because it no longer matches the layered structure above. The CI/CD workflow needs to be rebuilt to drive the deploy scripts (not raw `az deployment` calls against the old paths), covering zero-touch deploy on merge, migration-before-traffic-shift, and federated-identity login. This is the remaining scope of this spec.
+
 ## Assumptions
 
-- The project already has a working GitHub Actions CI setup for testing; this feature extends it with deployment stages.
+- The project already has a working GitHub Actions CI setup for testing (`backend-ci.yml`, `frontend-ci.yml`); this feature extends it with deployment stages that drive the layered infra scripts.
 - Azure Container Apps is the target compute platform for the backend, as specified in the constitution.
 - Azure Static Web Apps hosts the frontend.
 - Azure Database for PostgreSQL Flexible Server is the production database.
-- Azure Container Registry stores backend container images.
+- Azure Container Registry stores backend container images, provisioned once in the shared layer and reused across environments.
 - Azure Key Vault stores all application secrets at runtime.
-- Bicep is the IaC language, per the constitution's Technology Standards.
-- The GitHub repository has a single production environment (`main` branch → production); staging environments are out of scope for the initial implementation but the design should not preclude adding them later.
+- Bicep is the IaC language, per the constitution's Technology Standards, organized into bootstrap/shared/environment layers rather than a single flat template.
+- The repository supports multiple environments (`dev`, `prod`) via per-environment parameter files (`infra/environment/parameters/*.bicepparam`); the CI/CD workflow must resolve the target environment rather than assuming a single production target.
 - The team has Owner or Contributor access to an Azure subscription to configure federated identity and assign roles.
