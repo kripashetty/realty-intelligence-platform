@@ -23,9 +23,27 @@ jobs:
     name: Backend
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: realty_test
+          POSTGRES_USER: realty
+          POSTGRES_PASSWORD: realty
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U realty"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     defaults:
       run:
         working-directory: backend
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://realty:realty@localhost:5432/realty_test
 
     steps:
       - name: Checkout repository
