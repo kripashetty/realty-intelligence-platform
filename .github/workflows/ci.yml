@@ -1,0 +1,183 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+          working-directory: backend
+
+      - name: Install Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-extras --dev
+
+      - name: Check formatting
+        run: uv run ruff format --check .
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Run tests
+        run: uv run pytest
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test -- --run
+
+      - name: Build frontend
+        env:
+          VITE_API_BASE_URL: http://localhost:8000/api/v1
+        run: npm run build
+
+  infrastructure:
+    name: Infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show Azure CLI version
+        run: az version
+
+      - name: Install or update Bicep
+        run: az bicep install
+
+      - name: Show Bicep version
+        run: az bicep version
+
+      - name: Build shared Bicep template
+        run: |
+          mkdir -p /tmp/bicep
+          az bicep build \
+            --file infra/shared/main.bicep \
+            --outfile /tmp/bicep/shared.json
+
+      - name: Build environment Bicep template
+        run: |
+          az bicep build \
+            --file infra/environment/main.bicep \
+            --outfile /tmp/bicep/environment.json
+
+      - name: Build shared parameter file
+        if: ${{ hashFiles('infra/shared/parameters/shared.bicepparam') != '' }}
+        run: |
+          az bicep build-params \
+            --file infra/shared/parameters/shared.bicepparam \
+            --outfile /tmp/bicep/shared.parameters.json
+
+      - name: Build development parameter file
+        if: ${{ hashFiles('infra/environment/parameters/dev.bicepparam') != '' }}
+        env:
+          BACKEND_IMAGE: example.azurecr.io/backend:ci
+          POSTGRES_ADMIN_PASSWORD: ci-placeholder-not-used
+        run: |
+          az bicep build-params \
+            --file infra/environment/parameters/dev.bicepparam \
+            --outfile /tmp/bicep/dev.parameters.json
+
+  scripts:
+    name: Shell scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes shellcheck
+
+      - name: Check shell syntax
+        run: |
+          find infra/scripts \
+            -type f \
+            -name '*.sh' \
+            -print0 |
+          xargs -0 -r bash -n
+
+      - name: Run ShellCheck
+        run: |
+          find infra/scripts \
+            -type f \
+            -name '*.sh' \
+            -print0 |
+          xargs -0 -r shellcheck
+
+  backend-image:
+    name: Backend container image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: false
+          tags: realty-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
