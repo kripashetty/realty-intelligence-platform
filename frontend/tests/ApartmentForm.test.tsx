@@ -3,7 +3,7 @@
  * Written before implementation (TDD red phase).
  * ApartmentForm does not exist yet.
  */
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import { ApartmentForm } from '../src/components/ApartmentForm'
