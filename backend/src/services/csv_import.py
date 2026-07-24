@@ -169,7 +169,6 @@ class CsvImportService:
         self, db, batch_id: uuid.UUID, valid_rows: list[dict]
     ) -> None:
 
-
         from src.models.listing import Listing
 
         now = datetime.now(UTC)

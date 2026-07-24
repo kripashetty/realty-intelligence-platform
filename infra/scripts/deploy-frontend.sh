@@ -108,7 +108,8 @@ SWA_DEPLOYMENT_TOKEN="$(
 [[ -n "$SWA_DEPLOYMENT_TOKEN" ]] ||
   fail "Could not retrieve the Static Web Apps deployment token."
 
-export VITE_API_BASE_URL="${BACKEND_URL%/}/api/v1"
+export VITE_API_BASE_URL="${CORS_ORIGINS%/}/api/v1"
+
 log "Frontend API base URL: $VITE_API_BASE_URL"
 
 log "Installing frontend dependencies"
