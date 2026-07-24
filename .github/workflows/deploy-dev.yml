@@ -124,7 +124,7 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.image.outputs.backend-image }}
       
-            - name: Deploy dev environment
+      - name: Deploy dev environment
         id: environment
         env:
           BACKEND_IMAGE: ${{ steps.image.outputs.backend-image }}
