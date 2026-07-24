@@ -20,6 +20,7 @@ jobs:
     env:
       AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
       POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+      SHARED_RESOURCE_GROUP: realty-shared-rg
 
     steps:
       - name: Checkout repository
@@ -47,6 +48,16 @@ jobs:
             }' \
             --output jsonc
 
+      - name: Ensure shared resource group exists
+        run: |
+          set -euo pipefail
+
+          az group create \
+            --name "$SHARED_RESOURCE_GROUP" \
+            --location "$AZURE_LOCATION" \
+            --tags application=realty scope=shared managedBy=bicep \
+            --output none
+
       - name: Deploy shared infrastructure
         id: shared
         run: |
@@ -54,9 +65,10 @@ jobs:
 
           DEPLOYMENT_NAME="realty-shared-${GITHUB_RUN_NUMBER}"
 
-          az deployment sub create \
+          az deployment group create \
             --name "$DEPLOYMENT_NAME" \
-            --location "$AZURE_LOCATION" \
+            --resource-group "$SHARED_RESOURCE_GROUP" \
+            --template-file infra/shared/main.bicep \
             --parameters infra/shared/parameters/shared.bicepparam \
             --output json > shared-deployment.json
 
@@ -67,11 +79,6 @@ jobs:
 
           ACR_LOGIN_SERVER="$(
             jq -r '.properties.outputs.acrLoginServer.value' \
-              shared-deployment.json
-          )"
-
-          SHARED_RESOURCE_GROUP="$(
-            jq -r '.properties.outputs.resourceGroupName.value' \
               shared-deployment.json
           )"
 
