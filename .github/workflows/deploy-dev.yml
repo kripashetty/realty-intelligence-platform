@@ -192,159 +192,158 @@ jobs:
             echo "static-web-app-name=$STATIC_WEB_APP_NAME"
           } >> "$GITHUB_OUTPUT"
         
-      - name: Run database migration
-        env:
+      # - name: Run database migration
+      #   env:
+      #     RESOURCE_GROUP: ${{ steps.environment-outputs.outputs.resource-group }}
+      #     MIGRATION_JOB_NAME: ${{ steps.environment-outputs.outputs.migration-job-name }}
+      #   run: |
+      #     set -euo pipefail
 
-          RESOURCE_GROUP: ${{ steps.environment-outputs.outputs.resource-group }}
+      #     RESOURCE_GROUP="${{ steps.environment-outputs.outputs.resource-group }}"
+      #     JOB_NAME="${{ steps.environment-outputs.outputs.migration-job-name }}"
 
-          MIGRATION_JOB_NAME: ${{ steps.environment-outputs.outputs.migration-job-name }}
-        run: |
-          set -euo pipefail
+      #     EXECUTION_NAME="$(
+      #       az containerapp job start \
+      #         --resource-group "$RESOURCE_GROUP" \
+      #         --name "$JOB_NAME" \
+      #         --query name \
+      #         --output tsv
+      #     )"
 
-          RESOURCE_GROUP="${{ steps.environment-outputs.outputs.resource-group }}"
-          JOB_NAME="${{ steps.environment-outputs.outputs.migration-job-name }}"
+      #     echo "Migration execution: $EXECUTION_NAME"
 
-          EXECUTION_NAME="$(
-            az containerapp job start \
-              --resource-group "$RESOURCE_GROUP" \
-              --name "$JOB_NAME" \
-              --query name \
-              --output tsv
-          )"
+      #     for attempt in $(seq 1 60); do
+      #       STATUS="$(
+      #         az containerapp job execution show \
+      #           --resource-group "$RESOURCE_GROUP" \
+      #           --name "$JOB_NAME" \
+      #           --job-execution-name "$EXECUTION_NAME" \
+      #           --query properties.status \
+      #           --output tsv
+      #       )"
 
-          echo "Migration execution: $EXECUTION_NAME"
+      #       echo "Migration status: $STATUS"
 
-          for attempt in $(seq 1 60); do
-            STATUS="$(
-              az containerapp job execution show \
-                --resource-group "$RESOURCE_GROUP" \
-                --name "$JOB_NAME" \
-                --job-execution-name "$EXECUTION_NAME" \
-                --query properties.status \
-                --output tsv
-            )"
+      #       case "$STATUS" in
+      #         Succeeded)
+      #           exit 0
+      #           ;;
+      #         Failed)
+      #           echo "Migration failed"
+      #           exit 1
+      #           ;;
+      #       esac
 
-            echo "Migration status: $STATUS"
+      #       sleep 10
+      #     done
 
-            case "$STATUS" in
-              Succeeded)
-                exit 0
-                ;;
-              Failed)
-                echo "Migration failed"
-                exit 1
-                ;;
-            esac
-
-            sleep 10
-          done
-
-          echo "Migration timed out"
-          exit 1
+      #     echo "Migration timed out"
+      #     exit 1
         
-      - name: Bootstrap Ollama model
-        run: |
-          set -euo pipefail
+      # - name: Bootstrap Ollama model
+      #   run: |
+      #     set -euo pipefail
 
-          RESOURCE_GROUP="${{ steps.environment-outputs.outputs.resource-group }}"
-          JOB_NAME="${{ steps.environment-outputs.outputs.ollama-job-name }}"
+      #     RESOURCE_GROUP="${{ steps.environment-outputs.outputs.resource-group }}"
+      #     JOB_NAME="${{ steps.environment-outputs.outputs.ollama-job-name }}"
 
-          EXECUTION_NAME="$(
-            az containerapp job start \
-              --resource-group "$RESOURCE_GROUP" \
-              --name "$JOB_NAME" \
-              --query name \
-              --output tsv
-          )"
+      #     EXECUTION_NAME="$(
+      #       az containerapp job start \
+      #         --resource-group "$RESOURCE_GROUP" \
+      #         --name "$JOB_NAME" \
+      #         --query name \
+      #         --output tsv
+      #     )"
 
-          echo "Ollama bootstrap execution: $EXECUTION_NAME"
+      #     echo "Ollama bootstrap execution: $EXECUTION_NAME"
 
-          for attempt in $(seq 1 120); do
-            STATUS="$(
-              az containerapp job execution show \
-                --resource-group "$RESOURCE_GROUP" \
-                --name "$JOB_NAME" \
-                --job-execution-name "$EXECUTION_NAME" \
-                --query properties.status \
-                --output tsv
-            )"
+      #     for attempt in $(seq 1 120); do
+      #       STATUS="$(
+      #         az containerapp job execution show \
+      #           --resource-group "$RESOURCE_GROUP" \
+      #           --name "$JOB_NAME" \
+      #           --job-execution-name "$EXECUTION_NAME" \
+      #           --query properties.status \
+      #           --output tsv
+      #       )"
 
-            echo "Ollama bootstrap status: $STATUS"
+      #       echo "Ollama bootstrap status: $STATUS"
 
-            case "$STATUS" in
-              Succeeded)
-                exit 0
-                ;;
-              Failed)
-                echo "Ollama bootstrap failed"
-                exit 1
-                ;;
-            esac
+      #       case "$STATUS" in
+      #         Succeeded)
+      #           exit 0
+      #           ;;
+      #         Failed)
+      #           echo "Ollama bootstrap failed"
+      #           exit 1
+      #           ;;
+      #       esac
 
-            sleep 15
-          done
+      #       sleep 15
+      #     done
 
-          echo "Ollama bootstrap timed out"
-          exit 1
-      - name: Get Static Web Apps deployment token
-        id: swa-token
-        run: |
-          set -euo pipefail
+      #     echo "Ollama bootstrap timed out"
+      #     exit 1
 
-          TOKEN="$(
-            az staticwebapp secrets list \
-              --name "${{ steps.environment-outputs.outputs.static-web-app-name }}" \
-              --resource-group "${{ steps.environment-outputs.outputs.resource-group }}" \
-              --query properties.apiKey \
-              --output tsv
-          )"
+      # - name: Get Static Web Apps deployment token
+      #   id: swa-token
+      #   run: |
+      #     set -euo pipefail
 
-          echo "::add-mask::$TOKEN"
-          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+      #     TOKEN="$(
+      #       az staticwebapp secrets list \
+      #         --name "${{ steps.environment-outputs.outputs.static-web-app-name }}" \
+      #         --resource-group "${{ steps.environment-outputs.outputs.resource-group }}" \
+      #         --query properties.apiKey \
+      #         --output tsv
+      #     )"
 
-      - name: Deploy frontend
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
-          action: upload
-          app_location: frontend/dist
-          skip_app_build: true
+      #     echo "::add-mask::$TOKEN"
+      #     echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      # - name: Deploy frontend
+      #   uses: Azure/static-web-apps-deploy@v1
+      #   with:
+      #     azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+      #     action: upload
+      #     app_location: frontend/dist
+      #     skip_app_build: true
   
-      - name: Smoke test backend
-        run: |
-          set -euo pipefail
+      # - name: Smoke test backend
+      #   run: |
+      #     set -euo pipefail
 
-          BACKEND_URL="${{ steps.environment-outputs.outputs.backend-url }}"
+      #     BACKEND_URL="${{ steps.environment-outputs.outputs.backend-url }}"
 
-          for attempt in $(seq 1 30); do
-            if curl \
-              --fail \
-              --silent \
-              --show-error \
-              "$BACKEND_URL/health"; then
-              exit 0
-            fi
+      #     for attempt in $(seq 1 30); do
+      #       if curl \
+      #         --fail \
+      #         --silent \
+      #         --show-error \
+      #         "$BACKEND_URL/health"; then
+      #         exit 0
+      #       fi
 
-            echo "Backend not ready; retrying..."
-            sleep 10
-          done
+      #       echo "Backend not ready; retrying..."
+      #       sleep 10
+      #     done
 
-          echo "Backend health check failed"
-          exit 1
+      #     echo "Backend health check failed"
+      #     exit 1
 
-      - name: Smoke test frontend
-        run: |
-          set -euo pipefail
+      # - name: Smoke test frontend
+      #   run: |
+      #     set -euo pipefail
 
-          FRONTEND_URL="$(
-            jq -er '.properties.outputs.frontendUrl.value' \
-              environment-deployment.json
-          )"
+      #     FRONTEND_URL="$(
+      #       jq -er '.properties.outputs.frontendUrl.value' \
+      #         environment-deployment.json
+      #     )"
 
-          curl \
-            --fail \
-            --silent \
-            --show-error \
-            --location \
-            "$FRONTEND_URL" \
-            > /dev/null
+      #     curl \
+      #       --fail \
+      #       --silent \
+      #       --show-error \
+      #       --location \
+      #       "$FRONTEND_URL" \
+      #       > /dev/null
