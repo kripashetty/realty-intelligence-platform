@@ -1,0 +1,88 @@
+name: Deploy Dev
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy-infrastructure:
+    name: Deploy dev infrastructure
+    runs-on: ubuntu-latest
+    environment: dev
+
+    env:
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Bicep
+        run: az bicep install
+
+      - name: Verify Azure context
+        run: |
+          set -euo pipefail
+
+          az account show \
+            --query '{
+              subscription:name,
+              subscriptionId:id,
+              tenantId:tenantId
+            }' \
+            --output jsonc
+
+      - name: Deploy shared infrastructure
+        id: shared
+        run: |
+          set -euo pipefail
+
+          DEPLOYMENT_NAME="realty-shared-${GITHUB_RUN_NUMBER}"
+
+          az deployment sub create \
+            --name "$DEPLOYMENT_NAME" \
+            --location "$AZURE_LOCATION" \
+            --parameters infra/shared/parameters/shared.bicepparam \
+            --output json > shared-deployment.json
+
+          ACR_NAME="$(
+            jq -r '.properties.outputs.acrName.value' \
+              shared-deployment.json
+          )"
+
+          ACR_LOGIN_SERVER="$(
+            jq -r '.properties.outputs.acrLoginServer.value' \
+              shared-deployment.json
+          )"
+
+          SHARED_RESOURCE_GROUP="$(
+            jq -r '.properties.outputs.resourceGroupName.value' \
+              shared-deployment.json
+          )"
+
+          {
+            echo "acr-name=$ACR_NAME"
+            echo "acr-login-server=$ACR_LOGIN_SERVER"
+            echo "shared-resource-group=$SHARED_RESOURCE_GROUP"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Show shared outputs
+        run: |
+          echo "ACR name: ${{ steps.shared.outputs.acr-name }}"
+          echo "ACR login server: ${{ steps.shared.outputs.acr-login-server }}"
+          echo "Shared resource group: ${{ steps.shared.outputs.shared-resource-group }}"
