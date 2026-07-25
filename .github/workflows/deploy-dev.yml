@@ -223,12 +223,10 @@ jobs:
       - name: Run database migration
         env:
           RESOURCE_GROUP: ${{ steps.environment-outputs.outputs.resource-group }}
-          MIGRATION_JOB_NAME: ${{ steps.environment-outputs.outputs.migration-job-name }}
+          JOB_NAME: ${{ steps.environment-outputs.outputs.migration-job-name }}
+        shell: bash
         run: |
           set -euo pipefail
-
-          RESOURCE_GROUP="${{ steps.environment-outputs.outputs.resource-group }}"
-          JOB_NAME="${{ steps.environment-outputs.outputs.migration-job-name }}"
 
           EXECUTION_NAME="$(
             az containerapp job start \
@@ -237,6 +235,11 @@ jobs:
               --query name \
               --output tsv
           )"
+
+          if [[ -z "$EXECUTION_NAME" ]]; then
+            echo "::error::Azure did not return a migration execution name"
+            exit 1
+          fi
 
           echo "Migration execution: $EXECUTION_NAME"
 
@@ -247,25 +250,69 @@ jobs:
                 --name "$JOB_NAME" \
                 --job-execution-name "$EXECUTION_NAME" \
                 --query properties.status \
-                --output tsv
+                --output tsv 2>/dev/null || true
             )"
 
-            echo "Migration status: $STATUS"
+            echo "Migration status: ${STATUS:-Unknown} (attempt $attempt/60)"
 
             case "$STATUS" in
               Succeeded)
+                echo "Migration succeeded"
                 exit 0
                 ;;
+
               Failed)
-                echo "Migration failed"
-                exit 1
+                echo "::error::Migration execution failed"
+                break
+                ;;
+
+              Running|Processing|Waiting|Unknown|"")
+                ;;
+
+              *)
+                echo "Unexpected migration status: $STATUS"
                 ;;
             esac
 
             sleep 10
           done
 
-          echo "Migration timed out"
+          echo "Migration execution details:"
+          az containerapp job execution show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$JOB_NAME" \
+            --job-execution-name "$EXECUTION_NAME" \
+            --output jsonc || true
+
+          echo "Migration replicas:"
+          az containerapp job replica list \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$JOB_NAME" \
+            --job-execution-name "$EXECUTION_NAME" \
+            --output table || true
+
+          REPLICA_NAME="$(
+            az containerapp job replica list \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$JOB_NAME" \
+              --job-execution-name "$EXECUTION_NAME" \
+              --query '[0].name' \
+              --output tsv 2>/dev/null || true
+          )"
+
+          if [[ -n "$REPLICA_NAME" ]]; then
+            echo "Migration logs for replica: $REPLICA_NAME"
+
+            az containerapp job logs show \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$JOB_NAME" \
+              --job-execution-name "$EXECUTION_NAME" \
+              --replica "$REPLICA_NAME" \
+              --tail 300 || true
+          else
+            echo "::warning::No migration replica was found"
+          fi
+
           exit 1
         
       - name: Bootstrap Ollama model
