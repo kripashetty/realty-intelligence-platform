@@ -137,95 +137,90 @@ jobs:
       - name: Deploy dev environment
         id: environment
         env:
-            BACKEND_IMAGE: ${{ steps.image.outputs.backend-image }}
-            POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+          DEV_RESOURCE_GROUP: realty-dev-rg
+          BACKEND_IMAGE: ${{ steps.image.outputs.backend-image }}
+          POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+        shell: bash
         run: |
-            set -euo pipefail
+          set -euo pipefail
 
-            RESOURCE_GROUP="realty-dev-rg"
-            DEPLOYMENT_NAME="realty-dev-${GITHUB_RUN_NUMBER}"
+          DEPLOYMENT_NAME="realty-dev-${GITHUB_RUN_NUMBER}"
 
-            az deployment group validate \
-              --resource-group "$RESOURCE_GROUP" \
-              --name "${DEPLOYMENT_NAME}-validate" \
-              --parameters infra/environment/parameters/dev.bicepparam \
-              --output none
+          echo "Validating deployment: $DEPLOYMENT_NAME"
+          echo "Resource group: $DEV_RESOURCE_GROUP"
 
-            az deployment group create \
-              --resource-group "$RESOURCE_GROUP" \
-              --name "$DEPLOYMENT_NAME" \
-              --parameters infra/environment/parameters/dev.bicepparam \
-              --output json \
-              > environment-deployment.json
+          az deployment group validate \
+            --resource-group "$DEV_RESOURCE_GROUP" \
+            --name "${DEPLOYMENT_NAME}-validate" \
+            --parameters infra/environment/parameters/dev.bicepparam \
+            --output none
 
-            jq '.properties.outputs' environment-deployment.json
+          echo "Deploying environment..."
+
+          az deployment group create \
+            --resource-group "$DEV_RESOURCE_GROUP" \
+            --name "$DEPLOYMENT_NAME" \
+            --parameters infra/environment/parameters/dev.bicepparam \
+            --query properties.outputs \
+            --output json \
+            > environment-outputs.json
+
+          echo "Environment deployment outputs:"
+          jq . environment-outputs.json
+
+          echo "deployment-name=$DEPLOYMENT_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Capture environment outputs
         id: environment-outputs
         env:
           DEV_RESOURCE_GROUP: realty-dev-rg
+        shell: bash
         run: |
           set -euo pipefail
 
-          echo "Available outputs:"
+          if [[ ! -s environment-outputs.json ]]; then
+            echo "::error::environment-outputs.json does not exist or is empty"
+            exit 1
+          fi
 
-          jq -r '.properties.outputs | keys[]' environment-deployment.json
+          echo "Available deployment outputs:"
+          jq -r 'keys[]' environment-outputs.json
 
           require_output() {
-
             local output_name="$1"
-
             local value
 
             value="$(
-
               jq -r \
-
                 --arg name "$output_name" \
-
-                '.properties.outputs[$name].value // empty' \
-
-                environment-deployment.json
-
+                '.[$name].value // empty' \
+                environment-outputs.json
             )"
 
             if [[ -z "$value" ]]; then
-
               echo "::error::Missing deployment output: $output_name"
-
-              exit 1
-
+              return 1
             fi
 
             printf '%s' "$value"
-
           }
 
           BACKEND_NAME="$(require_output backendName)"
-
           BACKEND_URL="$(require_output backendUrl)"
-
           MIGRATION_JOB_NAME="$(require_output migrationJobName)"
-
           OLLAMA_BOOTSTRAP_JOB_NAME="$(require_output ollamaBootstrapJobName)"
-
           STATIC_WEB_APP_NAME="$(require_output frontendName)"
 
           {
-
             echo "resource-group=$DEV_RESOURCE_GROUP"
-
             echo "backend-name=$BACKEND_NAME"
-
             echo "backend-url=$BACKEND_URL"
-
             echo "migration-job-name=$MIGRATION_JOB_NAME"
-
             echo "ollama-job-name=$OLLAMA_BOOTSTRAP_JOB_NAME"
-
             echo "static-web-app-name=$STATIC_WEB_APP_NAME"
-
           } >> "$GITHUB_OUTPUT"
+
+          echo "Captured environment outputs successfully."
         
       - name: Run database migration
         env:
@@ -344,41 +339,41 @@ jobs:
           app_location: frontend/dist
           skip_app_build: true
   
-      # - name: Smoke test backend
-      #   run: |
-      #     set -euo pipefail
+      - name: Smoke test backend
+        run: |
+          set -euo pipefail
 
-      #     BACKEND_URL="${{ steps.environment-outputs.outputs.backend-url }}"
+          BACKEND_URL="${{ steps.environment-outputs.outputs.backend-url }}"
 
-      #     for attempt in $(seq 1 30); do
-      #       if curl \
-      #         --fail \
-      #         --silent \
-      #         --show-error \
-      #         "$BACKEND_URL/health"; then
-      #         exit 0
-      #       fi
+          for attempt in $(seq 1 30); do
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              "$BACKEND_URL/health"; then
+              exit 0
+            fi
 
-      #       echo "Backend not ready; retrying..."
-      #       sleep 10
-      #     done
+            echo "Backend not ready; retrying..."
+            sleep 10
+          done
 
-      #     echo "Backend health check failed"
-      #     exit 1
+          echo "Backend health check failed"
+          exit 1
 
-      # - name: Smoke test frontend
-      #   run: |
-      #     set -euo pipefail
+      - name: Smoke test frontend
+        run: |
+          set -euo pipefail
 
-      #     FRONTEND_URL="$(
-      #       jq -er '.properties.outputs.frontendUrl.value' \
-      #         environment-deployment.json
-      #     )"
+          FRONTEND_URL="$(
+            jq -er '.properties.outputs.frontendUrl.value' \
+              environment-deployment.json
+          )"
 
-      #     curl \
-      #       --fail \
-      #       --silent \
-      #       --show-error \
-      #       --location \
-      #       "$FRONTEND_URL" \
-      #       > /dev/null
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            "$FRONTEND_URL" \
+            > /dev/null
