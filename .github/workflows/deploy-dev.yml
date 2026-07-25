@@ -20,8 +20,7 @@ jobs:
     env:
       AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
       POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
-      SHARED_RESOURCE_GROUP: realty-shared-rg
-
+      SHARED_RESOURCE_GROUP: ${{ vars.SHARED_RESOURCE_GROUP }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -123,8 +122,19 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: ${{ steps.image.outputs.backend-image }}
-      
-      - name: Deploy dev environment
+
+
+      - name: Ensure dev resource group exists
+        env:
+          DEV_RESOURCE_GROUP: ${{ vars.DEV_RESOURCE_GROUP }}
+        run: |
+          set -euo pipefail
+          az group create \
+            --name "$DEV_RESOURCE_GROUP" \
+            --location "$AZURE_LOCATION" \
+            --output none
+        
+    - name: Deploy dev environment
         id: environment
         env:
           BACKEND_IMAGE: ${{ steps.image.outputs.backend-image }}
@@ -132,17 +142,18 @@ jobs:
         run: |
           set -euo pipefail
 
+          RESOURCE_GROUP="realty-dev-rg"
           DEPLOYMENT_NAME="realty-dev-${GITHUB_RUN_NUMBER}"
 
-          az deployment sub validate \
+          az deployment group validate \
+            --resource-group "$RESOURCE_GROUP" \
             --name "${DEPLOYMENT_NAME}-validate" \
-            --location "$AZURE_LOCATION" \
             --parameters infra/environment/parameters/dev.bicepparam \
             --output none
 
-          az deployment sub create \
+          az deployment group create \
+            --resource-group "$RESOURCE_GROUP" \
             --name "$DEPLOYMENT_NAME" \
-            --location "$AZURE_LOCATION" \
             --parameters infra/environment/parameters/dev.bicepparam \
             --output json \
             > environment-deployment.json
