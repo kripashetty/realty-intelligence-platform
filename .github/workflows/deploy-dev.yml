@@ -126,39 +126,39 @@ jobs:
 
       - name: Ensure dev resource group exists
         env:
-          DEV_RESOURCE_GROUP: ${{ vars.DEV_RESOURCE_GROUP }}
+              DEV_RESOURCE_GROUP: ${{ vars.DEV_RESOURCE_GROUP }}
         run: |
-          set -euo pipefail
-          az group create \
-            --name "$DEV_RESOURCE_GROUP" \
-            --location "$AZURE_LOCATION" \
-            --output none
+            set -euo pipefail
+            az group create \
+              --name "$DEV_RESOURCE_GROUP" \
+              --location "$AZURE_LOCATION" \
+              --output none
         
-    - name: Deploy dev environment
+      - name: Deploy dev environment
         id: environment
         env:
-          BACKEND_IMAGE: ${{ steps.image.outputs.backend-image }}
-          POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+            BACKEND_IMAGE: ${{ steps.image.outputs.backend-image }}
+            POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
         run: |
-          set -euo pipefail
+            set -euo pipefail
 
-          RESOURCE_GROUP="realty-dev-rg"
-          DEPLOYMENT_NAME="realty-dev-${GITHUB_RUN_NUMBER}"
+            RESOURCE_GROUP="realty-dev-rg"
+            DEPLOYMENT_NAME="realty-dev-${GITHUB_RUN_NUMBER}"
 
-          az deployment group validate \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "${DEPLOYMENT_NAME}-validate" \
-            --parameters infra/environment/parameters/dev.bicepparam \
-            --output none
+            az deployment group validate \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "${DEPLOYMENT_NAME}-validate" \
+              --parameters infra/environment/parameters/dev.bicepparam \
+              --output none
 
-          az deployment group create \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$DEPLOYMENT_NAME" \
-            --parameters infra/environment/parameters/dev.bicepparam \
-            --output json \
-            > environment-deployment.json
+            az deployment group create \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$DEPLOYMENT_NAME" \
+              --parameters infra/environment/parameters/dev.bicepparam \
+              --output json \
+              > environment-deployment.json
 
-          jq '.properties.outputs' environment-deployment.json
+            jq '.properties.outputs' environment-deployment.json
 
       - name: Capture environment outputs
         id: environment-outputs
