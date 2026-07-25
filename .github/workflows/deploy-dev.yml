@@ -205,7 +205,6 @@ jobs:
             printf '%s' "$value"
           }
 
-          BACKEND_NAME="$(require_output backendName)"
           BACKEND_URL="$(require_output backendUrl)"
           MIGRATION_JOB_NAME="$(require_output migrationJobName)"
           OLLAMA_BOOTSTRAP_JOB_NAME="$(require_output ollamaBootstrapJobName)"
@@ -213,7 +212,6 @@ jobs:
 
           {
             echo "resource-group=$DEV_RESOURCE_GROUP"
-            echo "backend-name=$BACKEND_NAME"
             echo "backend-url=$BACKEND_URL"
             echo "migration-job-name=$MIGRATION_JOB_NAME"
             echo "ollama-job-name=$OLLAMA_BOOTSTRAP_JOB_NAME"
