@@ -162,164 +162,187 @@ jobs:
 
       - name: Capture environment outputs
         id: environment-outputs
+        env:
+          DEV_RESOURCE_GROUP: realty-dev-rg
         run: |
           set -euo pipefail
 
-          ENVIRONMENT_RESOURCE_GROUP="$(
-            jq -er '.properties.outputs.resourceGroupName.value' \
-              environment-deployment.json
-          )"
+          echo "Available outputs:"
 
-          BACKEND_NAME="$(
-            jq -er '.properties.outputs.backendName.value' \
-              environment-deployment.json
-          )"
+          jq -r '.properties.outputs | keys[]' environment-deployment.json
 
-          BACKEND_URL="$(
-            jq -er '.properties.outputs.backendUrl.value' \
-              environment-deployment.json
-          )"
+          require_output() {
 
-          MIGRATION_JOB_NAME="$(
-            jq -er '.properties.outputs.migrationJobName.value' \
-              environment-deployment.json
-          )"
+            local output_name="$1"
 
-          OLLAMA_BOOTSTRAP_JOB_NAME="$(
-            jq -er '.properties.outputs.ollamaBootstrapJobName.value' \
-              environment-deployment.json
-          )"
+            local value
 
-          STATIC_WEB_APP_NAME="$(
-            jq -er '.properties.outputs.frontendName.value' \
-              environment-deployment.json
-          )"
+            value="$(
+
+              jq -r \
+
+                --arg name "$output_name" \
+
+                '.properties.outputs[$name].value // empty' \
+
+                environment-deployment.json
+
+            )"
+
+            if [[ -z "$value" ]]; then
+
+              echo "::error::Missing deployment output: $output_name"
+
+              exit 1
+
+            fi
+
+            printf '%s' "$value"
+
+          }
+
+          BACKEND_NAME="$(require_output backendName)"
+
+          BACKEND_URL="$(require_output backendUrl)"
+
+          MIGRATION_JOB_NAME="$(require_output migrationJobName)"
+
+          OLLAMA_BOOTSTRAP_JOB_NAME="$(require_output ollamaBootstrapJobName)"
+
+          STATIC_WEB_APP_NAME="$(require_output frontendName)"
 
           {
-            echo "resource-group=$ENVIRONMENT_RESOURCE_GROUP"
+
+            echo "resource-group=$DEV_RESOURCE_GROUP"
+
             echo "backend-name=$BACKEND_NAME"
+
             echo "backend-url=$BACKEND_URL"
+
             echo "migration-job-name=$MIGRATION_JOB_NAME"
+
             echo "ollama-job-name=$OLLAMA_BOOTSTRAP_JOB_NAME"
+
             echo "static-web-app-name=$STATIC_WEB_APP_NAME"
+
           } >> "$GITHUB_OUTPUT"
         
-      # - name: Run database migration
-      #   env:
-      #     RESOURCE_GROUP: ${{ steps.environment-outputs.outputs.resource-group }}
-      #     MIGRATION_JOB_NAME: ${{ steps.environment-outputs.outputs.migration-job-name }}
-      #   run: |
-      #     set -euo pipefail
+      - name: Run database migration
+        env:
+          RESOURCE_GROUP: ${{ steps.environment-outputs.outputs.resource-group }}
+          MIGRATION_JOB_NAME: ${{ steps.environment-outputs.outputs.migration-job-name }}
+        run: |
+          set -euo pipefail
 
-      #     RESOURCE_GROUP="${{ steps.environment-outputs.outputs.resource-group }}"
-      #     JOB_NAME="${{ steps.environment-outputs.outputs.migration-job-name }}"
+          RESOURCE_GROUP="${{ steps.environment-outputs.outputs.resource-group }}"
+          JOB_NAME="${{ steps.environment-outputs.outputs.migration-job-name }}"
 
-      #     EXECUTION_NAME="$(
-      #       az containerapp job start \
-      #         --resource-group "$RESOURCE_GROUP" \
-      #         --name "$JOB_NAME" \
-      #         --query name \
-      #         --output tsv
-      #     )"
+          EXECUTION_NAME="$(
+            az containerapp job start \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$JOB_NAME" \
+              --query name \
+              --output tsv
+          )"
 
-      #     echo "Migration execution: $EXECUTION_NAME"
+          echo "Migration execution: $EXECUTION_NAME"
 
-      #     for attempt in $(seq 1 60); do
-      #       STATUS="$(
-      #         az containerapp job execution show \
-      #           --resource-group "$RESOURCE_GROUP" \
-      #           --name "$JOB_NAME" \
-      #           --job-execution-name "$EXECUTION_NAME" \
-      #           --query properties.status \
-      #           --output tsv
-      #       )"
+          for attempt in $(seq 1 60); do
+            STATUS="$(
+              az containerapp job execution show \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$JOB_NAME" \
+                --job-execution-name "$EXECUTION_NAME" \
+                --query properties.status \
+                --output tsv
+            )"
 
-      #       echo "Migration status: $STATUS"
+            echo "Migration status: $STATUS"
 
-      #       case "$STATUS" in
-      #         Succeeded)
-      #           exit 0
-      #           ;;
-      #         Failed)
-      #           echo "Migration failed"
-      #           exit 1
-      #           ;;
-      #       esac
+            case "$STATUS" in
+              Succeeded)
+                exit 0
+                ;;
+              Failed)
+                echo "Migration failed"
+                exit 1
+                ;;
+            esac
 
-      #       sleep 10
-      #     done
+            sleep 10
+          done
 
-      #     echo "Migration timed out"
-      #     exit 1
+          echo "Migration timed out"
+          exit 1
         
-      # - name: Bootstrap Ollama model
-      #   run: |
-      #     set -euo pipefail
+      - name: Bootstrap Ollama model
+        run: |
+          set -euo pipefail
 
-      #     RESOURCE_GROUP="${{ steps.environment-outputs.outputs.resource-group }}"
-      #     JOB_NAME="${{ steps.environment-outputs.outputs.ollama-job-name }}"
+          RESOURCE_GROUP="${{ steps.environment-outputs.outputs.resource-group }}"
+          JOB_NAME="${{ steps.environment-outputs.outputs.ollama-job-name }}"
 
-      #     EXECUTION_NAME="$(
-      #       az containerapp job start \
-      #         --resource-group "$RESOURCE_GROUP" \
-      #         --name "$JOB_NAME" \
-      #         --query name \
-      #         --output tsv
-      #     )"
+          EXECUTION_NAME="$(
+            az containerapp job start \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$JOB_NAME" \
+              --query name \
+              --output tsv
+          )"
 
-      #     echo "Ollama bootstrap execution: $EXECUTION_NAME"
+          echo "Ollama bootstrap execution: $EXECUTION_NAME"
 
-      #     for attempt in $(seq 1 120); do
-      #       STATUS="$(
-      #         az containerapp job execution show \
-      #           --resource-group "$RESOURCE_GROUP" \
-      #           --name "$JOB_NAME" \
-      #           --job-execution-name "$EXECUTION_NAME" \
-      #           --query properties.status \
-      #           --output tsv
-      #       )"
+          for attempt in $(seq 1 120); do
+            STATUS="$(
+              az containerapp job execution show \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$JOB_NAME" \
+                --job-execution-name "$EXECUTION_NAME" \
+                --query properties.status \
+                --output tsv
+            )"
 
-      #       echo "Ollama bootstrap status: $STATUS"
+            echo "Ollama bootstrap status: $STATUS"
 
-      #       case "$STATUS" in
-      #         Succeeded)
-      #           exit 0
-      #           ;;
-      #         Failed)
-      #           echo "Ollama bootstrap failed"
-      #           exit 1
-      #           ;;
-      #       esac
+            case "$STATUS" in
+              Succeeded)
+                exit 0
+                ;;
+              Failed)
+                echo "Ollama bootstrap failed"
+                exit 1
+                ;;
+            esac
 
-      #       sleep 15
-      #     done
+            sleep 15
+          done
 
-      #     echo "Ollama bootstrap timed out"
-      #     exit 1
+          echo "Ollama bootstrap timed out"
+          exit 1
 
-      # - name: Get Static Web Apps deployment token
-      #   id: swa-token
-      #   run: |
-      #     set -euo pipefail
+      - name: Get Static Web Apps deployment token
+        id: swa-token
+        run: |
+          set -euo pipefail
 
-      #     TOKEN="$(
-      #       az staticwebapp secrets list \
-      #         --name "${{ steps.environment-outputs.outputs.static-web-app-name }}" \
-      #         --resource-group "${{ steps.environment-outputs.outputs.resource-group }}" \
-      #         --query properties.apiKey \
-      #         --output tsv
-      #     )"
+          TOKEN="$(
+            az staticwebapp secrets list \
+              --name "${{ steps.environment-outputs.outputs.static-web-app-name }}" \
+              --resource-group "${{ steps.environment-outputs.outputs.resource-group }}" \
+              --query properties.apiKey \
+              --output tsv
+          )"
 
-      #     echo "::add-mask::$TOKEN"
-      #     echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
 
-      # - name: Deploy frontend
-      #   uses: Azure/static-web-apps-deploy@v1
-      #   with:
-      #     azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
-      #     action: upload
-      #     app_location: frontend/dist
-      #     skip_app_build: true
+      - name: Deploy frontend
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          action: upload
+          app_location: frontend/dist
+          skip_app_build: true
   
       # - name: Smoke test backend
       #   run: |
