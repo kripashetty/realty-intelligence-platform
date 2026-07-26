@@ -220,104 +220,104 @@ jobs:
 
           echo "Captured environment outputs successfully."
         
-- name: Run database migration
-  env:
-    RESOURCE_GROUP: ${{ steps.environment-outputs.outputs.resource-group }}
-    JOB_NAME: ${{ steps.environment-outputs.outputs.migration-job-name }}
-    CONTAINER_NAME: migration
-    shell: bash
-    run: |
-      set -euo pipefail
+      - name: Run database migration
+        env:
+          RESOURCE_GROUP: ${{ steps.environment-outputs.outputs.resource-group }}
+          JOB_NAME: ${{ steps.environment-outputs.outputs.migration-job-name }}
+          CONTAINER_NAME: migration
+          shell: bash
+          run: |
+            set -euo pipefail
 
-      EXECUTION_NAME="$(
-        az containerapp job start \
-          --resource-group "$RESOURCE_GROUP" \
-          --name "$JOB_NAME" \
-          --query name \
-          --output tsv
-      )"
+            EXECUTION_NAME="$(
+              az containerapp job start \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$JOB_NAME" \
+                --query name \
+                --output tsv
+            )"
 
-      if [[ -z "$EXECUTION_NAME" ]]; then
-        echo "::error::Azure did not return a migration execution name"
-        exit 1
-      fi
+            if [[ -z "$EXECUTION_NAME" ]]; then
+              echo "::error::Azure did not return a migration execution name"
+              exit 1
+            fi
 
-      echo "Migration execution: $EXECUTION_NAME"
+            echo "Migration execution: $EXECUTION_NAME"
 
-      RESULT="TimedOut"
+            RESULT="TimedOut"
 
-      for attempt in $(seq 1 60); do
-        STATUS="$(
-          az containerapp job execution show \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$JOB_NAME" \
-            --job-execution-name "$EXECUTION_NAME" \
-            --query properties.status \
-            --output tsv 2>/dev/null || true
-        )"
+            for attempt in $(seq 1 60); do
+              STATUS="$(
+                az containerapp job execution show \
+                  --resource-group "$RESOURCE_GROUP" \
+                  --name "$JOB_NAME" \
+                  --job-execution-name "$EXECUTION_NAME" \
+                  --query properties.status \
+                  --output tsv 2>/dev/null || true
+              )"
 
-        echo "Migration status: ${STATUS:-Unknown} (attempt $attempt/60)"
+              echo "Migration status: ${STATUS:-Unknown} (attempt $attempt/60)"
 
-        case "$STATUS" in
-          Succeeded)
-            echo "Database migration succeeded"
-            exit 0
-            ;;
-          Failed)
-            RESULT="Failed"
-            break
-            ;;
-          Running|Processing|Waiting|Unknown|"")
-            ;;
-          *)
-            echo "Unexpected migration status: $STATUS"
-            ;;
-        esac
+              case "$STATUS" in
+                Succeeded)
+                  echo "Database migration succeeded"
+                  exit 0
+                  ;;
+                Failed)
+                  RESULT="Failed"
+                  break
+                  ;;
+                Running|Processing|Waiting|Unknown|"")
+                  ;;
+                *)
+                  echo "Unexpected migration status: $STATUS"
+                  ;;
+              esac
 
-        sleep 10
-      done
+              sleep 10
+            done
 
-      echo "::error::Migration execution $RESULT"
+            echo "::error::Migration execution $RESULT"
 
-      echo "Migration execution details:"
-      az containerapp job execution show \
-        --resource-group "$RESOURCE_GROUP" \
-        --name "$JOB_NAME" \
-        --job-execution-name "$EXECUTION_NAME" \
-        --output jsonc || true
+            echo "Migration execution details:"
+            az containerapp job execution show \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$JOB_NAME" \
+              --job-execution-name "$EXECUTION_NAME" \
+              --output jsonc || true
 
-      echo "Migration replicas:"
-      az containerapp job replica list \
-        --resource-group "$RESOURCE_GROUP" \
-        --name "$JOB_NAME" \
-        --execution "$EXECUTION_NAME" \
-        --output table || true
+            echo "Migration replicas:"
+            az containerapp job replica list \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$JOB_NAME" \
+              --execution "$EXECUTION_NAME" \
+              --output table || true
 
-      REPLICA_NAME="$(
-        az containerapp job replica list \
-          --resource-group "$RESOURCE_GROUP" \
-          --name "$JOB_NAME" \
-          --execution "$EXECUTION_NAME" \
-          --query '[0].name' \
-          --output tsv 2>/dev/null || true
-      )"
+            REPLICA_NAME="$(
+              az containerapp job replica list \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$JOB_NAME" \
+                --execution "$EXECUTION_NAME" \
+                --query '[0].name' \
+                --output tsv 2>/dev/null || true
+            )"
 
-      if [[ -n "$REPLICA_NAME" ]]; then
-        echo "Migration logs for replica: $REPLICA_NAME"
+            if [[ -n "$REPLICA_NAME" ]]; then
+              echo "Migration logs for replica: $REPLICA_NAME"
 
-        az containerapp job logs show \
-          --resource-group "$RESOURCE_GROUP" \
-          --name "$JOB_NAME" \
-          --execution "$EXECUTION_NAME" \
-          --replica "$REPLICA_NAME" \
-          --container "$CONTAINER_NAME" \
-          --tail 300 \
-          --format text || true
-      else
-        echo "::warning::No migration replica was found; the replica may already have been cleaned up"
-      fi
+              az containerapp job logs show \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$JOB_NAME" \
+                --execution "$EXECUTION_NAME" \
+                --replica "$REPLICA_NAME" \
+                --container "$CONTAINER_NAME" \
+                --tail 300 \
+                --format text || true
+            else
+              echo "::warning::No migration replica was found; the replica may already have been cleaned up"
+            fi
 
-      exit 1
+            exit 1
         
       - name: Bootstrap Ollama model
         run: |
