@@ -363,7 +363,42 @@ jobs:
 
           echo "Ollama bootstrap timed out"
           exit 1
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
 
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: ${{ steps.environment-outputs.outputs.backend-url }}/api/v1
+        run: npm run build
+
+      - name: Inspect frontend build output
+
+        run: |
+
+          echo "Repository root"
+
+          pwd
+
+          echo ""
+
+          echo "Frontend directory"
+
+          ls -la frontend
+
+          echo ""
+
+          echo "Dist directory"
+
+          ls -la frontend/dist || true
+
+          echo ""
+
+          echo "Recursive listing"
+
+          find frontend -maxdepth 2
+          
       - name: Get Static Web Apps deployment token
         id: swa-token
         run: |
