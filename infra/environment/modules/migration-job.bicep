@@ -95,6 +95,63 @@ resource migrationJob 'Microsoft.App/jobs@2026-01-01' = {
                   cd /app
 
                   test -n "$DATABASE_URL"
+                  python - <<'PY'
+
+                  import asyncio
+
+                  import os
+
+                  from sqlalchemy import text
+
+                  from sqlalchemy.ext.asyncio import create_async_engine
+
+                  async def wait_for_database() -> None:
+
+                      engine = create_async_engine(
+
+                          os.environ["DATABASE_URL"],
+
+                          pool_pre_ping=True,
+
+                          connect_args={"timeout": 15},
+
+                      )
+
+                      try:
+
+                          for attempt in range(1, 31):
+
+                              try:
+
+                                  async with engine.connect() as connection:
+
+                                      await connection.execute(text("select 1"))
+
+                                  print("Database is reachable.")
+
+                                  return
+
+                              except Exception as exc:
+
+                                  print(
+
+                                      f"Database not ready "
+
+                                      f"(attempt {attempt}/30): {type(exc).__name__}"
+
+                                  )
+
+                                  await asyncio.sleep(10)
+
+                          raise RuntimeError("Database was not reachable after 5 minutes")
+
+                      finally:
+
+                          await engine.dispose()
+
+                  asyncio.run(wait_for_database())
+
+                  PY
 
                   python -m alembic upgrade head
 
