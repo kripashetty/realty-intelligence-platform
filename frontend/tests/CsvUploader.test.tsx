@@ -56,7 +56,7 @@ describe('CsvUploader', () => {
   })
 
   it('shows processing status after upload starts', async () => {
-    const user = userEvent.setup()
+    userEvent.setup()
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ batch_id: 'abc', status: 'processing', message: 'Started' }),
@@ -73,10 +73,8 @@ describe('CsvUploader', () => {
 
   it('calls onImportComplete when batch status is completed', async () => {
     const onComplete = vi.fn()
-    let pollCount = 0
     vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
       if (String(url).includes('/import/')) {
-        pollCount++
         return {
           ok: true,
           json: async () => ({

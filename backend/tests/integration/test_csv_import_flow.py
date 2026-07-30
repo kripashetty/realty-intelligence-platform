@@ -17,6 +17,7 @@ def no_background_geocoding():
     with patch("src.api.v1.listings._run_geocoding", new=AsyncMock()):
         yield
 
+
 SAMPLE_CSV = """\
 title,address,price,size,rooms,floor,url,date,provider
 Nice flat,Invalidenstraße 50 10115 Berlin,1200.00,65.0,2.0,3,https://example.com/flow-1,2026-07-10,immobilienscout24

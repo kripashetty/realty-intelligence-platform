@@ -5,7 +5,6 @@ import {
   getRecommendation,
   ApartmentRequest,
   RecommendationResponse,
-  BatchStatusResponse,
 } from '../services/api'
 import { ApartmentForm } from '../components/ApartmentForm'
 import { CsvUploader } from '../components/CsvUploader'
@@ -31,7 +30,7 @@ export function RecommendationPage() {
     onSuccess: (data) => setResult(data),
   })
 
-  function handleImportComplete(_batch: BatchStatusResponse) {
+  function handleImportComplete() {
     refetchStatus()
   }
 

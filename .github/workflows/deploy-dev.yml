@@ -1,0 +1,463 @@
+name: Deploy Dev
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy-infrastructure:
+    name: Deploy dev infrastructure
+    runs-on: ubuntu-latest
+    environment: dev
+
+    env:
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+      SHARED_RESOURCE_GROUP: ${{ vars.SHARED_RESOURCE_GROUP }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Bicep
+        run: az bicep install
+
+      - name: Verify Azure context
+        run: |
+          set -euo pipefail
+
+          az account show \
+            --query '{
+              subscription:name,
+              subscriptionId:id,
+              tenantId:tenantId
+            }' \
+            --output jsonc
+
+      - name: Ensure shared resource group exists
+        run: |
+          set -euo pipefail
+
+          az group create \
+            --name "$SHARED_RESOURCE_GROUP" \
+            --location "$AZURE_LOCATION" \
+            --tags application=realty scope=shared managedBy=bicep \
+            --output none
+
+      - name: Deploy shared infrastructure
+        id: shared
+        run: |
+          set -euo pipefail
+
+          DEPLOYMENT_NAME="realty-shared-${GITHUB_RUN_NUMBER}"
+
+          az deployment group create \
+            --name "$DEPLOYMENT_NAME" \
+            --resource-group "$SHARED_RESOURCE_GROUP" \
+            --template-file infra/shared/main.bicep \
+            --parameters infra/shared/parameters/shared.bicepparam \
+            --output json > shared-deployment.json
+
+          ACR_NAME="$(
+            jq -r '.properties.outputs.acrName.value' \
+              shared-deployment.json
+          )"
+
+          ACR_LOGIN_SERVER="$(
+            jq -r '.properties.outputs.acrLoginServer.value' \
+              shared-deployment.json
+          )"
+
+          {
+            echo "acr-name=$ACR_NAME"
+            echo "acr-login-server=$ACR_LOGIN_SERVER"
+            echo "shared-resource-group=$SHARED_RESOURCE_GROUP"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Show shared outputs
+        run: |
+          echo "ACR name: ${{ steps.shared.outputs.acr-name }}"
+          echo "ACR login server: ${{ steps.shared.outputs.acr-login-server }}"
+          echo "Shared resource group: ${{ steps.shared.outputs.shared-resource-group }}"
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      
+      - name: Login to Azure Container Registry
+        run: |
+          set -euo pipefail
+
+          az acr login \
+            --name "${{ steps.shared.outputs.acr-name }}"
+
+      - name: Set backend image
+        id: image
+        run: |
+          set -euo pipefail
+
+          IMAGE="${{ steps.shared.outputs.acr-login-server }}/realty-backend:${GITHUB_SHA}"
+
+          echo "backend-image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "Building $IMAGE"
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.image.outputs.backend-image }}
+
+
+      - name: Ensure dev resource group exists
+        env:
+              DEV_RESOURCE_GROUP: ${{ vars.DEV_RESOURCE_GROUP }}
+        run: |
+            set -euo pipefail
+            az group create \
+              --name "$DEV_RESOURCE_GROUP" \
+              --location "$AZURE_LOCATION" \
+              --output none
+        
+      - name: Deploy dev environment
+        id: environment
+        env:
+          DEV_RESOURCE_GROUP: realty-dev-rg
+          BACKEND_IMAGE: ${{ steps.image.outputs.backend-image }}
+          POSTGRES_ADMIN_PASSWORD: ${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DEPLOYMENT_NAME="realty-dev-${GITHUB_RUN_NUMBER}"
+
+          echo "Validating deployment: $DEPLOYMENT_NAME"
+          echo "Resource group: $DEV_RESOURCE_GROUP"
+
+          az deployment group validate \
+            --resource-group "$DEV_RESOURCE_GROUP" \
+            --name "${DEPLOYMENT_NAME}-validate" \
+            --parameters infra/environment/parameters/dev.bicepparam \
+            --output none
+
+          echo "Deploying environment..."
+
+          az deployment group create \
+            --resource-group "$DEV_RESOURCE_GROUP" \
+            --name "$DEPLOYMENT_NAME" \
+            --parameters infra/environment/parameters/dev.bicepparam \
+            --query properties.outputs \
+            --output json \
+            > environment-outputs.json
+
+          echo "Environment deployment outputs:"
+          jq . environment-outputs.json
+
+          echo "deployment-name=$DEPLOYMENT_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Capture environment outputs
+        id: environment-outputs
+        env:
+          DEV_RESOURCE_GROUP: realty-dev-rg
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! -s environment-outputs.json ]]; then
+            echo "::error::environment-outputs.json does not exist or is empty"
+            exit 1
+          fi
+
+          echo "Available deployment outputs:"
+          jq -r 'keys[]' environment-outputs.json
+
+          require_output() {
+            local output_name="$1"
+            local value
+
+            value="$(
+              jq -r \
+                --arg name "$output_name" \
+                '.[$name].value // empty' \
+                environment-outputs.json
+            )"
+
+            if [[ -z "$value" ]]; then
+              echo "::error::Missing deployment output: $output_name"
+              return 1
+            fi
+
+            printf '%s' "$value"
+          }
+
+          BACKEND_URL="$(require_output backendUrl)"
+          MIGRATION_JOB_NAME="$(require_output migrationJobName)"
+          OLLAMA_BOOTSTRAP_JOB_NAME="$(require_output ollamaBootstrapJobName)"
+          STATIC_WEB_APP_NAME="$(require_output frontendName)"
+
+          {
+            echo "resource-group=$DEV_RESOURCE_GROUP"
+            echo "backend-url=$BACKEND_URL"
+            echo "migration-job-name=$MIGRATION_JOB_NAME"
+            echo "ollama-job-name=$OLLAMA_BOOTSTRAP_JOB_NAME"
+            echo "static-web-app-name=$STATIC_WEB_APP_NAME"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Captured environment outputs successfully."
+        
+      - name: Run database migration
+        env:
+          RESOURCE_GROUP: ${{ steps.environment-outputs.outputs.resource-group }}
+          JOB_NAME: ${{ steps.environment-outputs.outputs.migration-job-name }}
+          CONTAINER_NAME: migration
+          shell: bash
+        run: |
+              set -euo pipefail
+
+              EXECUTION_NAME="$(
+                az containerapp job start \
+                  --resource-group "$RESOURCE_GROUP" \
+                  --name "$JOB_NAME" \
+                  --query name \
+                  --output tsv
+              )"
+
+              if [[ -z "$EXECUTION_NAME" ]]; then
+                echo "::error::Azure did not return a migration execution name"
+                exit 1
+              fi
+
+              echo "Migration execution: $EXECUTION_NAME"
+
+              RESULT="TimedOut"
+
+              for attempt in $(seq 1 60); do
+                STATUS="$(
+                  az containerapp job execution show \
+                    --resource-group "$RESOURCE_GROUP" \
+                    --name "$JOB_NAME" \
+                    --job-execution-name "$EXECUTION_NAME" \
+                    --query properties.status \
+                    --output tsv 2>/dev/null || true
+                )"
+
+                echo "Migration status: ${STATUS:-Unknown} (attempt $attempt/60)"
+
+                case "$STATUS" in
+                  Succeeded)
+                    echo "Database migration succeeded"
+                    exit 0
+                    ;;
+                  Failed)
+                    RESULT="Failed"
+                    break
+                    ;;
+                  Running|Processing|Waiting|Unknown|"")
+                    ;;
+                  *)
+                    echo "Unexpected migration status: $STATUS"
+                    ;;
+                esac
+
+                sleep 10
+              done
+
+              echo "::error::Migration execution $RESULT"
+
+              echo "Migration execution details:"
+              az containerapp job execution show \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$JOB_NAME" \
+                --job-execution-name "$EXECUTION_NAME" \
+                --output jsonc || true
+
+              echo "Migration replicas:"
+              az containerapp job replica list \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$JOB_NAME" \
+                --execution "$EXECUTION_NAME" \
+                --output table || true
+
+              REPLICA_NAME="$(
+                az containerapp job replica list \
+                  --resource-group "$RESOURCE_GROUP" \
+                  --name "$JOB_NAME" \
+                  --execution "$EXECUTION_NAME" \
+                  --query '[0].name' \
+                  --output tsv 2>/dev/null || true
+              )"
+
+              if [[ -n "$REPLICA_NAME" ]]; then
+                echo "Migration logs for replica: $REPLICA_NAME"
+
+                az containerapp job logs show \
+                  --resource-group "$RESOURCE_GROUP" \
+                  --name "$JOB_NAME" \
+                  --execution "$EXECUTION_NAME" \
+                  --replica "$REPLICA_NAME" \
+                  --container "$CONTAINER_NAME" \
+                  --tail 300 \
+                  --format text || true
+              else
+                echo "::warning::No migration replica was found; the replica may already have been cleaned up"
+              fi
+
+              exit 1
+        
+      - name: Bootstrap Ollama model
+        run: |
+          set -euo pipefail
+
+          RESOURCE_GROUP="${{ steps.environment-outputs.outputs.resource-group }}"
+          JOB_NAME="${{ steps.environment-outputs.outputs.ollama-job-name }}"
+
+          EXECUTION_NAME="$(
+            az containerapp job start \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$JOB_NAME" \
+              --query name \
+              --output tsv
+          )"
+
+          echo "Ollama bootstrap execution: $EXECUTION_NAME"
+
+          for attempt in $(seq 1 120); do
+            STATUS="$(
+              az containerapp job execution show \
+                --resource-group "$RESOURCE_GROUP" \
+                --name "$JOB_NAME" \
+                --job-execution-name "$EXECUTION_NAME" \
+                --query properties.status \
+                --output tsv
+            )"
+
+            echo "Ollama bootstrap status: $STATUS"
+
+            case "$STATUS" in
+              Succeeded)
+                exit 0
+                ;;
+              Failed)
+                echo "Ollama bootstrap failed"
+                exit 1
+                ;;
+            esac
+
+            sleep 15
+          done
+
+          echo "Ollama bootstrap timed out"
+          exit 1
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: ${{ steps.environment-outputs.outputs.backend-url }}/api/v1
+        run: npm run build
+
+      - name: Inspect frontend build output
+
+        run: |
+
+          echo "Repository root"
+
+          pwd
+
+          echo ""
+
+          echo "Frontend directory"
+
+          ls -la frontend
+
+          echo ""
+
+          echo "Dist directory"
+
+          ls -la frontend/dist || true
+
+          echo ""
+
+          echo "Recursive listing"
+
+          find frontend -maxdepth 2
+          
+      - name: Get Static Web Apps deployment token
+        id: swa-token
+        run: |
+          set -euo pipefail
+
+          TOKEN="$(
+            az staticwebapp secrets list \
+              --name "${{ steps.environment-outputs.outputs.static-web-app-name }}" \
+              --resource-group "${{ steps.environment-outputs.outputs.resource-group }}" \
+              --query properties.apiKey \
+              --output tsv
+          )"
+
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy frontend
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          action: upload
+          app_location: frontend/dist
+          skip_app_build: true
+  
+      - name: Smoke test backend
+        run: |
+          set -euo pipefail
+
+          BACKEND_URL="${{ steps.environment-outputs.outputs.backend-url }}"
+
+          for attempt in $(seq 1 30); do
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              "$BACKEND_URL/health"; then
+              exit 0
+            fi
+
+            echo "Backend not ready; retrying..."
+            sleep 10
+          done
+
+          echo "Backend health check failed"
+          exit 1
+
+      - name: Smoke test frontend
+        run: |
+          set -euo pipefail
+
+          FRONTEND_URL="$(
+            jq -er '.properties.outputs.frontendUrl.value' \
+              environment-deployment.json
+          )"
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            "$FRONTEND_URL" \
+            > /dev/null

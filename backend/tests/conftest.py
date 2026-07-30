@@ -23,6 +23,7 @@ def _make_engine():
 
 # --- Schema lifecycle (synchronous so it never touches the test event loop) ---
 
+
 @pytest.fixture(scope="session")
 def create_tables():
     """Create schema once before DB tests; drop after. Runs sync via asyncio.run()."""
@@ -45,6 +46,7 @@ def create_tables():
 
 
 # --- Per-test DB session (each test gets its own connection via NullPool) ---
+
 
 @pytest_asyncio.fixture
 async def db_session(create_tables):

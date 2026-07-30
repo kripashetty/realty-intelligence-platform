@@ -28,6 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.exception_handler(HTTPException)
 async def _http_exception_handler(request, exc: HTTPException):
     """Return dict details at root level instead of wrapping under 'detail'."""
